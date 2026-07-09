@@ -1,5 +1,7 @@
 """Pydantic schemas for the facts API."""
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -42,3 +44,12 @@ class FactResponse(BaseModel):
     confidence: str
     created_at: str = ""
     updated_at: str = ""
+    duplicate_of: str | None = None
+
+
+class DuplicateFactResponse(BaseModel):
+    """Response when a fact is detected as a duplicate during confirmation."""
+
+    status: Literal["duplicate"]
+    existing_fact_id: str
+    statement: str

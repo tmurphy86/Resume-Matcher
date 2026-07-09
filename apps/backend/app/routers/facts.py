@@ -1,12 +1,12 @@
 """Facts API endpoints."""
 
 import logging
-from typing import Any
+from typing import Any, Union
 
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import db
-from app.schemas.facts import FactCreate, FactResponse, FactUpdate
+from app.schemas.facts import DuplicateFactResponse, FactCreate, FactResponse, FactUpdate
 from app.services import fact_extractor
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,26 @@ async def extract_facts(resume_id: str = Query(...)) -> list[FactResponse]:
     return [FactResponse(**c) for c in candidates]
 
 
-@router.post("/confirm", response_model=list[FactResponse], status_code=201)
-async def confirm_facts_endpoint(candidates: list[FactCreate]) -> list[FactResponse]:
-    """Persist confirmed/approved candidate facts to the fact base."""
-    persisted = await fact_extractor.confirm_facts([c.model_dump() for c in candidates])
-    return [FactResponse(**f) for f in persisted]
+@router.post("/confirm", response_model=list[Union[FactResponse, DuplicateFactResponse]], status_code=201)
+async def confirm_facts_endpoint(
+    candidates: list[FactCreate],
+) -> list[Union[FactResponse, DuplicateFactResponse]]:
+    """Persist confirmed/approved candidate facts to the fact base.
+
+    Implements dedup: checks each candidate against existing facts. If a near-duplicate
+    (similarity >= 0.9) is found, returns DuplicateFactResponse. Otherwise, persists and
+    returns FactResponse.
+
+    Returns a list mixing FactResponse and DuplicateFactResponse objects.
+    """
+    results = await fact_extractor.confirm_facts([c.model_dump() for c in candidates])
+
+    # Map results to appropriate response types
+    responses: list[Union[FactResponse, DuplicateFactResponse]] = []
+    for result in results:
+        if result.get("status") == "duplicate":
+            responses.append(DuplicateFactResponse(**result))
+        else:
+            responses.append(FactResponse(**result))
+
+    return responses
