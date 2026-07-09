@@ -14,14 +14,15 @@
 
 ## Shipped
 - **RH-101** `feat(facts): RH-101 facts table + CRUD` (afa5038) — `Fact` model, database facade, `schemas/facts.py`, `routers/facts.py` (GET/POST/PATCH/DELETE `/api/v1/facts`), 14 integration tests. ✅
-- **RH-103** `feat(schema): RH-103 block variants + tags in ResumeData` (e3cb66b) — `BlockVariant`, `BulletBlock` models; `Experience.bullet_blocks`, `ResumeData.summary_blocks`; active-variant derivation of legacy `description`/`summary`; 17 unit tests. ✅
-- **RH-105** `feat(tracker): RH-105 interest signals on applications` (1619bdc) — `interest_signals` JSON column on Application; `InterestSignal`/`InterestDimension` schemas; `resources/interest_dimensions.json` (7 dims); `GET /applications/interest-dimensions`; PATCH dimension validation (422); 11 integration tests. ✅
-- **RH-106** `feat(tracker): RH-106 considering quick-capture` (1aa3bd6) — `Application.resume_id` nullable; `considering` status (first in order); `POST /applications/quick` creates Job+Application(considering) in one call; duplicate 409 guard; 7 integration tests. ✅
+- **RH-102** `feat(facts): RH-102 fact extraction from master resume` (a904ba6) — `FACT_EXTRACTION_PROMPT`, `fact_extractor` service, `POST /facts/extract` + `POST /facts/confirm`; 8 service tests (mocked LLM). ✅
+- **RH-103** `feat(schema): RH-103 block variants + tags in ResumeData` (e3cb66b) — `BlockVariant`, `BulletBlock` models; `Experience.bullet_blocks`, `ResumeData.summary_blocks`; active-variant derivation; 17 unit tests. ✅
+- **RH-104** `feat(provenance): RH-104 provenance lint service` (7fe672f) — pure `check_provenance()` function; `GET /resumes/{id}/provenance`; 13 unit tests covering covered/uncovered/broken/legacy states. ✅
+- **RH-105** `feat(tracker): RH-105 interest signals on applications` (1619bdc) — `interest_signals` JSON column; `GET /applications/interest-dimensions`; PATCH validation (422); 11 integration tests. ✅
+- **RH-106** `feat(tracker): RH-106 considering quick-capture` (1aa3bd6) — `Application.resume_id` nullable; `considering` status; `POST /applications/quick`; 7 integration tests. ✅
+- **RH-107** `feat(tracker): RH-107 considering column + interest quick-tags` (3fa1e83) — frontend: considering column, interest signal chips + panel, quick-capture mode in add dialog; all 6 locales updated (also fixed fr.json parity gap); 4 new API tests. ✅
 
 ## In flight
-- **RH-102** — blocked on RH-101 ✅ (unblocked; not yet dispatched)
-- **RH-104** — blocked on RH-101 ✅ + RH-103 ✅ (unblocked; not yet dispatched)
-- **RH-107** — blocked on RH-105 ✅ + RH-106 ✅ (unblocked; not yet dispatched)
+_(none — P1 complete)_
 
 ## Blockers
 _(none)_
@@ -31,4 +32,5 @@ _(none — ADRs 001–003 pre-resolve the P1 questions; see docs/decisions/)_
 
 ## Session log
 - 2026-07-09 — Program lead: scaffolding created (this file, BACKLOG, SPEC, ADRs 001–003, .claude/agents/), P1 tickets cut.
-- 2026-07-09 — Eng lead: dispatched RH-101/103/105/106 in parallel (4 isolated worktrees). All 4 agents passed tests; reviewer approved RH-103; cherry-picked all into main. Full suite: 546 passed (444 baseline + 102 new). RH-102, RH-104, RH-107 unblocked for next dispatch.
+- 2026-07-09 — Eng lead (wave 1): dispatched RH-101/103/105/106 in parallel. All 4 agents passed; reviewer approved RH-103; integrated to main. Suite: 546 passed (+102 new).
+- 2026-07-09 — Eng lead (wave 2): dispatched RH-102/104/107 in parallel. All 3 agents passed; integrated to main (manual patch for wave-1/wave-2 worktree overlap on backend, lint fix for pre-existing ats-score-card.tsx + fr.json parity). Suite: 567 backend (+21 new), 183 frontend passed (+5 new; 11 pre-existing failures in resume-wizard-page/viewer unchanged). **P1 complete.**
