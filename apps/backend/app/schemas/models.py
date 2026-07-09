@@ -117,6 +117,24 @@ class SectionType(str, Enum):
     STRING_LIST = "stringList"  # Array of strings (like skills)
 
 
+# Variant/Block Layer Models (ADR-002: variants live inside processed_data)
+class BlockVariant(BaseModel):
+    """A single variant of a resume block (bullet or summary) with provenance."""
+
+    id: str
+    text: str
+    tags: list[str] = Field(default_factory=list)
+    fact_ids: list[str] = Field(default_factory=list)
+
+
+class BulletBlock(BaseModel):
+    """A resume bullet (or summary block) with multiple variants, one active at a time."""
+
+    id: str
+    active_variant_id: str
+    variants: list[BlockVariant] = Field(default_factory=list)
+
+
 # Resume Data Models (matching frontend types in resume-component.tsx)
 class PersonalInfo(BaseModel):
     """Personal information section."""
@@ -140,11 +158,32 @@ class Experience(BaseModel):
     location: str | None = None
     years: str = ""
     description: list[str] = Field(default_factory=list)
+    bullet_blocks: list[BulletBlock] = Field(default_factory=list)
 
     @field_validator("description", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
+
+    @model_validator(mode="after")
+    def _derive_description_from_blocks(self) -> "Experience":
+        """When bullet_blocks is non-empty, rebuild description from active variants.
+
+        Blocks take precedence over the legacy description field — each block
+        contributes one line (its active variant's text).  When bullet_blocks is
+        empty the field is left unchanged so old resume data validates as-is.
+        """
+        if not self.bullet_blocks:
+            return self
+        derived: list[str] = []
+        for block in self.bullet_blocks:
+            active = next(
+                (v for v in block.variants if v.id == block.active_variant_id), None
+            )
+            if active is not None:
+                derived.append(active.text)
+        self.description = derived
+        return self
 
 
 class Education(BaseModel):
@@ -353,10 +392,34 @@ class ResumeData(BaseModel):
     sectionMeta: list[SectionMeta] = Field(default_factory=list)
     customSections: dict[str, CustomSection] = Field(default_factory=dict)
 
+    # NEW: Variant/block layer (ADR-002)
+    summary_blocks: list[BulletBlock] = Field(default_factory=list)
+
     @field_validator("summary", mode="before")
     @classmethod
     def _normalize_summary(cls, value: Any) -> str:
         return _coerce_text(value)
+
+    @model_validator(mode="after")
+    def _derive_summary_from_blocks(self) -> "ResumeData":
+        """When summary_blocks is non-empty, derive summary from active variants.
+
+        Each block contributes its active variant's text; multiple blocks are
+        joined with a blank line.  When summary_blocks is empty the existing
+        ``summary`` field is left unchanged so old resume data validates as-is.
+        """
+        if not self.summary_blocks:
+            return self
+        parts: list[str] = []
+        for block in self.summary_blocks:
+            active = next(
+                (v for v in block.variants if v.id == block.active_variant_id), None
+            )
+            if active is not None:
+                parts.append(active.text)
+        if parts:
+            self.summary = "\n\n".join(parts)
+        return self
 
 
 # API Response Models
