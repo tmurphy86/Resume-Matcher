@@ -135,3 +135,19 @@ class ApiKey(Base):
     provider: Mapped[str] = mapped_column(String, primary_key=True)
     ciphertext: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
+
+
+class Fact(Base):
+    """A verified career fact in the fact base."""
+
+    __tablename__ = "facts"
+
+    fact_id: Mapped[str] = mapped_column(String, primary_key=True)
+    statement: Mapped[str] = mapped_column(Text)
+    context: Mapped[str | None] = mapped_column(String, nullable=True)
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
+    metrics_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    tags_json: Mapped[list] = mapped_column(JSON, default=list)
+    confidence: Mapped[str] = mapped_column(String, default="verified")
+    created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
+    updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)

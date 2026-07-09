@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
 from app.db_engine import init_models_sync, make_async_engine, make_sync_engine
-from app.models import ApiKey, Application, Improvement, Job, Resume
+from app.models import ApiKey, Application, Fact, Improvement, Job, Resume
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +173,20 @@ class Database:
             "applied_at": row.applied_at,
             "notes": row.notes,
             "position": row.position,
+            "created_at": row.created_at,
+            "updated_at": row.updated_at,
+        }
+
+    @staticmethod
+    def _fact_to_dict(row: Fact) -> dict[str, Any]:
+        return {
+            "fact_id": row.fact_id,
+            "statement": row.statement,
+            "context": row.context,
+            "source": row.source,
+            "metrics_json": row.metrics_json or {},
+            "tags_json": row.tags_json or [],
+            "confidence": row.confidence,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
         }
@@ -680,6 +694,102 @@ class Database:
                 await self._renumber(session, status)
             await session.commit()
         return deleted
+
+    # -- Fact operations ----------------------------------------------------
+
+    async def create_fact(
+        self,
+        statement: str,
+        context: str | None = None,
+        source: str | None = None,
+        metrics_json: dict | None = None,
+        tags_json: list | None = None,
+        confidence: str = "verified",
+    ) -> dict[str, Any]:
+        """Create a new fact entry."""
+        fact_id = str(uuid4())
+        now = _now()
+        if metrics_json is None:
+            metrics_json = {}
+        if tags_json is None:
+            tags_json = []
+
+        async with self._session() as session:
+            row = Fact(
+                fact_id=fact_id,
+                statement=statement,
+                context=context,
+                source=source,
+                metrics_json=metrics_json,
+                tags_json=tags_json,
+                confidence=confidence,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(row)
+            await session.commit()
+
+        return {
+            "fact_id": fact_id,
+            "statement": statement,
+            "context": context,
+            "source": source,
+            "metrics_json": metrics_json,
+            "tags_json": tags_json,
+            "confidence": confidence,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    async def get_fact(self, fact_id: str) -> dict[str, Any] | None:
+        """Get a fact by ID."""
+        async with self._session() as session:
+            row = await session.get(Fact, fact_id)
+            return self._fact_to_dict(row) if row else None
+
+    async def list_facts(
+        self, tag: str | None = None, context: str | None = None
+    ) -> list[dict[str, Any]]:
+        """List facts, optionally filtered by tag and/or context."""
+        async with self._session() as session:
+            stmt = select(Fact)
+
+            if context is not None:
+                stmt = stmt.where(Fact.context == context)
+
+            result = await session.execute(stmt)
+            facts = [self._fact_to_dict(row) for row in result.scalars().all()]
+
+            # Python-side filtering for tag (simpler than JSON path in SQLite)
+            if tag is not None:
+                facts = [f for f in facts if tag in f.get("tags_json", [])]
+
+            return facts
+
+    async def update_fact(self, fact_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        """Update a fact; returns updated fact or None if not found."""
+        async with self._session() as session:
+            row = await session.get(Fact, fact_id)
+            if row is None:
+                return None
+
+            for key in ("statement", "context", "source", "metrics_json", "tags_json", "confidence"):
+                if key in updates:
+                    setattr(row, key, updates[key])
+
+            row.updated_at = _now()
+            await session.commit()
+            return self._fact_to_dict(row)
+
+    async def delete_fact(self, fact_id: str) -> bool:
+        """Delete a fact; returns True if deleted, False if not found."""
+        async with self._session() as session:
+            row = await session.get(Fact, fact_id)
+            if row is None:
+                return False
+            await session.delete(row)
+            await session.commit()
+            return True
 
     # -- Encrypted API key store (sync; read on the LLM hot path) -----------
 
