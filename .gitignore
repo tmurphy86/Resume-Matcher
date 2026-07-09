@@ -59,10 +59,10 @@ apps/backend/data/config.json
 
 # Claude Code — track only CLAUDE.md and settings.json, ignore everything else
 # (skills, subagents, thoughts, prompts, sessions are all personal workflow)
-.claude/*
-!.claude/CLAUDE.md
-!.claude/settings.json
-skills-lock.json
+# .claude/*
+# !.claude/CLAUDE.md
+# !.claude/settings.json
+# skills-lock.json
 
 # AI assistant tool folders (personal workflow, not tracked)
 .agents/

@@ -23,6 +23,21 @@ Before exploring code, read [docs/agent/README.md](../docs/agent/README.md) for 
 
 ---
 
+## Orchestrated Development (Resume Hulk)
+
+This fork is developed via a multi-agent workflow. If you are the main session
+(engineering lead), follow [docs/ORCHESTRATION.md](../docs/ORCHESTRATION.md):
+
+1. Read [docs/PROJECT_STATE.md](../docs/PROJECT_STATE.md) and
+   [docs/BACKLOG.md](../docs/BACKLOG.md) before any other action.
+2. Dispatch tickets to the subagents in `.claude/agents/` (coder, senior-coder,
+   test-writer, reviewer) — ticket text + listed files only, never whole-repo context.
+3. Product spec: [docs/SPEC.md](../docs/SPEC.md). Architecture decisions:
+   [docs/decisions/](../docs/decisions/). Never guess on DECISION NEEDED items —
+   they belong to the program lead (Cowork project).
+
+---
+
 ## Non-Negotiable Rules
 
 1. **All frontend UI changes** MUST follow [Swiss International Style](../docs/portable/swiss-design-system/README.md) — see [tokens](../docs/portable/swiss-design-system/tokens.md), [components](../docs/portable/swiss-design-system/components.md), [anti-patterns](../docs/portable/swiss-design-system/anti-patterns.md)

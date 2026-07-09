@@ -96,8 +96,115 @@
 **Test:** `cd apps/frontend && npm run test && npm run lint`
 **Out of scope:** career intelligence dashboard, drag-reorder changes
 
-## P2 (preview — do not start; tickets cut after P1 review)
-Interview mode (gap Q&A → new facts) · fact-confirmation + variant editor UI · provenance badges · clickable ATS gaps → interview mode · dedup import of old resumes · "Tim" PDF template · .docx export · improver emits fact_ids
+## P2 — Wire the layers in (tailor-loop hardening)
+> Context: [reviews/P1-review.md](reviews/P1-review.md). P1 built the fact/variant/provenance layers; P2 makes the pipeline and the human actually use them. F1 is the critical path.
+
+### RH-201: Improver reads/writes blocks with fact provenance
+**Size:** L (split if needed) **Assign:** senior-coder (sonnet) **Depends:** — **Finding:** F1
+**Goal:** Tailoring operates on `bullet_blocks`/`summary_blocks`, not legacy `description`; every generated variant carries `fact_ids`.
+**Files:** `apps/backend/app/services/improver.py`, `apps/backend/app/prompts/` (tailoring templates), `apps/backend/app/services/provenance.py` (integration point), service tests
+**Constraints:** Facts relevant to the resume are injected into the tailoring prompt; LLM output schema requires `fact_ids[]` per rewritten block; blocks-less legacy resumes auto-wrap into single-variant blocks on first tailor. No real LLM calls in tests.
+**Acceptance criteria:**
+- [ ] Tailored resume `processed_data` contains blocks; legacy `description` derived, not authored
+- [ ] Each generated variant cites ≥1 valid fact_id OR is returned in an `unverified[]` list — never silently included
+- [ ] Improve response includes the provenance report (`covered/uncovered/broken`)
+- [ ] Existing improver tests still pass; new tests: fact injection, unverified segregation, legacy auto-wrap
+**Test:** `cd apps/backend && uv run pytest tests/service -k improver or provenance`
+**Out of scope:** refiner.py (RH-202), any UI
+
+### RH-202: Interview mode — gaps become questions, answers become facts
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-201
+**Goal:** The anti-hallucination Q&A loop.
+**Files:** `apps/backend/app/services/interview_mode.py` (new — distinct from interview_prep), `apps/backend/app/prompts/`, `apps/backend/app/routers/facts.py` (extend), tests
+**Acceptance criteria:**
+- [ ] `POST /api/facts/gap-questions` (job_id, resume_id) → structured questions for JD requirements with no supporting fact (uses RH-201's unverified list + JD keywords)
+- [ ] `POST /api/facts/answer` persists answers as facts (`confidence=user_answered`, `source=interview`), returns updated gap list
+- [ ] Refiner honors new facts on next pass (integration test with canned LLM)
+**Test:** `cd apps/backend && uv run pytest tests/service/test_interview_mode.py`
+**Out of scope:** chat UI (RH-205 exposes it minimally)
+
+### RH-203: Fact dedup on confirm + re-extract
+**Size:** S **Assign:** coder (haiku) **Depends:** — **Finding:** F2
+**Goal:** Confirming the same fact twice must not duplicate it.
+**Files:** `apps/backend/app/services/fact_extractor.py`, `apps/backend/app/schemas/facts.py`, tests
+**Constraints:** Deterministic — stdlib `difflib.SequenceMatcher` on normalized statements (threshold 0.9); no new deps, no embeddings, no LLM.
+**Acceptance criteria:**
+- [ ] `POST /facts/confirm` flags near-duplicates of existing facts → returned as `{status: "duplicate", existing_fact_id}` instead of inserted
+- [ ] `POST /facts/extract` annotates candidates already covered by existing facts
+- [ ] Tests: exact dup, near dup (>0.9), distinct fact below threshold
+**Test:** `cd apps/backend && uv run pytest tests/service/test_fact_extractor.py`
+**Out of scope:** merge UI, embedding similarity
+
+### RH-204: Facts library + extraction review UI
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-203 **Finding:** F3
+**Goal:** Human surface for the fact base: list/filter/edit facts; run extraction; review/edit/confirm candidates.
+**Files:** `apps/frontend/app/(default)/facts/` (new page), `apps/frontend/lib/api/facts.ts` (new), `apps/frontend/messages/*.json` (all locales), vitest API tests
+**Constraints:** Swiss design system; metadata font for fact IDs/sources; textarea Enter-key fix.
+**Acceptance criteria:**
+- [ ] Facts page: table w/ tag+context filters, inline edit, delete w/ confirm
+- [ ] "Extract from master" flow: candidates listed w/ dup annotations, editable, confirm selected
+- [ ] All locales updated; lint + vitest pass
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+
+### RH-205: Variant editor + provenance badges in tailor view
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-201 **Finding:** F3
+**Goal:** Per-block variant switching and visible provenance in the resume editor.
+**Files:** `apps/frontend/components/tailor/` (block editor additions), `apps/frontend/lib/api/resume.ts`, locales, tests
+**Acceptance criteria:**
+- [ ] Each block shows its variants (tags visible); switching active variant updates preview without full re-render
+- [ ] Provenance badge per block: covered (fact count) / uncovered / broken — uncovered+broken use alert tokens; hover reveals cited facts
+- [ ] Unverified LLM suggestions (RH-201) rendered in a distinct "needs verification" state with a shortcut to interview-mode questions (RH-202 endpoint)
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+
+### RH-206: Clickable ATS gaps → interview mode
+**Size:** S **Assign:** coder (haiku) **Depends:** RH-202, RH-205
+**Goal:** Missing-keyword items in the ATS score card deep-link into gap questions.
+**Files:** `apps/frontend/components/tailor/ats-score-card.tsx`, locales, tests
+**Acceptance criteria:**
+- [ ] Each missing keyword renders as an action chip → opens interview-mode panel pre-filtered to that gap
+- [ ] Covered keywords unchanged; lint passes
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+
+### RH-207: "Murphy" resume template
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** —
+**Goal:** Pixel-faithful template of Tim's current resume design (black name bar w/ letter-spaced caps, thin-rule small-caps section headers, gray competency band, serif-free body, mono contact line).
+**Files:** `apps/frontend/components/resume/resume-murphy.tsx` (new) + `styles/murphy.module.css` (new), template registration (follow resume-modern.tsx pattern), print route compatibility
+**Reference:** docs/reference/tim-resume-original.pdf (Tim: drop the PDF here)
+**Acceptance criteria:**
+- [ ] Renders master resume across 3 pages matching the reference layout (header, overview, competency band, experience w/ right-aligned dates, education, two-tier skills)
+- [ ] Print/PDF output paginates cleanly (page-container/use-pagination)
+- [ ] Registered in template picker; lint passes
+**Test:** `cd apps/frontend && npm run test && npm run lint` + manual PDF export check
+**Out of scope:** .docx (RH-208)
+
+### RH-208: .docx export
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-207
+**Goal:** Export any resume as .docx.
+**Files:** `apps/backend/app/services/docx_export.py` (new), `apps/backend/app/routers/resumes.py` (endpoint), tests
+**Constraints:** Dependency choice (python-docx vs html→docx) = **DECISION NEEDED** — propose in PROJECT_STATE.md with trade-offs before implementing.
+**Acceptance criteria:**
+- [ ] `GET /api/resumes/{id}/export/docx` streams a valid .docx with correct content ordering
+- [ ] Deterministic test opens the generated file and asserts structure (headings, bullet counts)
+**Test:** `cd apps/backend && uv run pytest tests/service/test_docx_export.py`
+
+### RH-209: Test hygiene
+**Size:** S **Assign:** coder (haiku) **Depends:** — **Finding:** F4
+**Goal:** Green suite, no noise.
+**Files:** `apps/frontend/tests/` (resume-wizard-page/viewer failures), `apps/frontend/components/tracker/kanban-board.tsx` (stale "seven columns" comment)
+**Acceptance criteria:**
+- [ ] 11 pre-existing frontend failures fixed or (if truly obsolete) each removal justified in the report — never silently deleted
+- [ ] Full frontend suite green
+**Test:** `cd apps/frontend && npm run test`
+
+### RH-210: Old-resume dedup import
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-203, RH-204
+**Goal:** Import legacy resumes; near-duplicate bullets cluster onto existing facts/variants for review instead of creating noise.
+**Files:** `apps/backend/app/services/fact_extractor.py` (extend), `apps/backend/app/routers/facts.py`, facts UI import flow, tests
+**Acceptance criteria:**
+- [ ] Upload old resume → extraction runs → candidates grouped: `new` / `duplicate` / `variant_of` (similar statement, different phrasing → offered as new variant text on the existing fact's blocks)
+- [ ] Confirm flow persists variants to master-resume blocks where applicable
+- [ ] Tests cover all three groupings
+**Test:** `cd apps/backend && uv run pytest tests/service/test_fact_extractor.py`
 
 ## Icebox
-Career intelligence engine (P3) · outcome overlay (P3) · JobSpy intake, JD library, multi-JD tailoring (P4) · thank-you email prompt profile on cover-letter module (P4)
+Career intelligence engine (P3: responsibility clustering, attraction/fit analysis, advice reports) · outcome overlay (P3) · JobSpy intake, JD library, multi-JD tailoring (P4) · thank-you email prompt profile on cover-letter module (P4)
