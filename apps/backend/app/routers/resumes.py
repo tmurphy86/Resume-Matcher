@@ -2129,3 +2129,36 @@ async def get_resume_provenance(resume_id: str) -> dict:
         raise HTTPException(status_code=500, detail="Failed to load facts. Please try again.")
 
     return check_provenance(resume_data, known_fact_ids)
+
+
+@router.get("/{resume_id}/export/docx")
+async def export_resume_docx(resume_id: str) -> Response:
+    """Export a resume as an ATS-safe .docx file (ADR-004).
+
+    Returns a Word document built with real heading styles and proper bullet
+    list paragraphs — suitable for ATS parsers and human editors.  Pixel
+    fidelity is intentionally traded for structural correctness.
+    """
+    from app.services.docx_export import build_docx
+
+    resume = await db.get_resume(resume_id)
+    if resume is None:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    processed = resume.get("processed_data")
+    if not processed:
+        raise HTTPException(
+            status_code=422, detail="Resume has no processed data to export"
+        )
+    try:
+        resume_data = ResumeData(**processed)
+        docx_bytes = build_docx(resume_data)
+    except Exception as e:
+        logger.error("DOCX export failed for %s: %s", resume_id, e)
+        raise HTTPException(status_code=500, detail="Export failed. Please try again.")
+
+    filename = f"resume-{resume_id[:8]}.docx"
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
