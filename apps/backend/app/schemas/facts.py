@@ -26,14 +26,19 @@ class FactUpdate(BaseModel):
 
 
 class FactResponse(BaseModel):
-    """A fact with all fields."""
+    """A fact with all fields.
 
-    fact_id: str
+    ``fact_id``, ``created_at``, ``updated_at`` default to empty strings so
+    candidate facts returned by POST /facts/extract (not yet persisted) can be
+    serialised without database-assigned values.
+    """
+
+    fact_id: str = ""
     statement: str
     context: str | None = None
     source: str | None = None
     metrics_json: dict
     tags_json: list[str]
     confidence: str
-    created_at: str
-    updated_at: str
+    created_at: str = ""
+    updated_at: str = ""

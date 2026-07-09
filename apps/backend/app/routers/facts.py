@@ -3,10 +3,11 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.database import db
 from app.schemas.facts import FactCreate, FactResponse, FactUpdate
+from app.services import fact_extractor
 
 logger = logging.getLogger(__name__)
 
@@ -67,3 +68,21 @@ async def delete_fact(fact_id: str) -> dict[str, Any]:
     if not deleted:
         raise HTTPException(status_code=404, detail="Fact not found")
     return {"message": "Fact deleted", "affected": 1}
+
+
+@router.post("/extract", response_model=list[FactResponse])
+async def extract_facts(resume_id: str = Query(...)) -> list[FactResponse]:
+    """Extract candidate facts from a master resume (not persisted).
+
+    Returns candidates for human review. Call POST /facts/confirm to persist
+    the approved facts.
+    """
+    candidates = await fact_extractor.extract_candidate_facts(resume_id)
+    return [FactResponse(**c) for c in candidates]
+
+
+@router.post("/confirm", response_model=list[FactResponse], status_code=201)
+async def confirm_facts_endpoint(candidates: list[FactCreate]) -> list[FactResponse]:
+    """Persist confirmed/approved candidate facts to the fact base."""
+    persisted = await fact_extractor.confirm_facts([c.model_dump() for c in candidates])
+    return [FactResponse(**f) for f in persisted]
