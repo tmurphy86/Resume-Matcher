@@ -67,6 +67,7 @@ from app.services.cover_letter import (
     generate_resume_title,
 )
 from app.services.interview_prep import generate_interview_prep
+from app.services.provenance import check_provenance
 from app.prompts import DEFAULT_IMPROVE_PROMPT_ID, IMPROVE_PROMPT_OPTIONS
 
 
@@ -2054,3 +2055,30 @@ async def download_cover_letter_pdf(
         "Content-Disposition": f'attachment; filename="cover_letter_{resume_id}.pdf"'
     }
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
+@router.get("/{resume_id}/provenance")
+async def get_resume_provenance(resume_id: str) -> dict:
+    """Report provenance coverage for a resume's variant blocks."""
+    resume = await db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    processed_data = resume.get("processed_data")
+    if not processed_data:
+        return {"covered": 0, "uncovered": [], "broken": [], "error": "no_processed_data"}
+
+    try:
+        resume_data = ResumeData(**processed_data)
+    except ValidationError as e:
+        logger.error("Failed to parse resume data for %s: %s", resume_id, e)
+        raise HTTPException(status_code=500, detail="Failed to parse resume data. Please try again.")
+
+    try:
+        facts = await db.list_facts()
+        known_fact_ids = {f["fact_id"] for f in facts}
+    except Exception as e:
+        logger.error("Failed to load facts for provenance check %s: %s", resume_id, e)
+        raise HTTPException(status_code=500, detail="Failed to load facts. Please try again.")
+
+    return check_provenance(resume_data, known_fact_ids)
