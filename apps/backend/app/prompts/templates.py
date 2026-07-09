@@ -515,6 +515,8 @@ Output this exact JSON format:
 
 DIFF_IMPROVE_PROMPT = """Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
 
+{facts_section}
+
 RULES:
 1. Only modify content; never change names, companies, dates, institutions, or degrees
 2. Do not invent metrics or achievements not supported by the original resume text
@@ -528,6 +530,10 @@ RULES:
 10. Exception to rule 2: you may add a skill only if it appears in the verified skill targets below
 11. By DEFAULT, scan the summary and every work, project, and education description for content that already demonstrates a job-description keyword or skill, and reframe that text using the job description's terminology where it is not already phrased that way (per rule 9, leave content that already aligns well), while preserving the candidate's actual accomplishment. Do NOT add new work, metrics, or responsibilities; only restate existing content in the JD's language, and verify every reframe stays factually accurate.
 12. Preserve original capitalization, especially for proper nouns, technical terms (e.g., REST, API, AWS), and acronyms. Do not change the casing of words that were capitalized in the original.
+
+IMPORTANT: For every "replace" or "append" change, you MUST include a "fact_ids" array citing which verified facts (from VERIFIED FACTS above) support this bullet. Example:
+{{"path": "workExperience[0].description[0]", "action": "replace", "value": "Led...", "fact_ids": ["<fact_id>"]}}
+If no fact supports a change, still include "fact_ids": [] and it will be flagged for review.
 
 PATHS you can target:
 - "summary" — the resume summary text
@@ -563,28 +569,32 @@ Output this exact JSON format, nothing else:
       "action": "replace",
       "original": "the exact original text at this path",
       "value": "the improved text",
-      "reason": "why this change helps"
+      "reason": "why this change helps",
+      "fact_ids": ["fact-id-123"]
     }},
     {{
       "path": "summary",
       "action": "replace",
       "original": "the current summary text",
       "value": "the improved summary",
-      "reason": "why this change helps"
+      "reason": "why this change helps",
+      "fact_ids": []
     }},
     {{
       "path": "additional.technicalSkills",
       "action": "reorder",
       "original": null,
       "value": ["most relevant skill first", "then next", "..."],
-      "reason": "reordered to prioritize JD-relevant skills"
+      "reason": "reordered to prioritize JD-relevant skills",
+      "fact_ids": []
     }},
     {{
       "path": "additional.technicalSkills",
       "action": "add_skill",
       "original": null,
       "value": "verified skill target missing from the skills list",
-      "reason": "added verified JD skill for review"
+      "reason": "added verified JD skill for review",
+      "fact_ids": []
     }}
   ],
   "strategy_notes": "brief summary of the tailoring approach"

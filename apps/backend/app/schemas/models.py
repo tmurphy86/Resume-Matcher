@@ -670,6 +670,10 @@ class ImproveResumeData(BaseModel):
     refinement_attempted: bool = False
     refinement_successful: bool = False
 
+    # Provenance report (fact coverage of the tailored output)
+    provenance: dict | None = None
+    unverified: list[dict] = Field(default_factory=list)
+
 
 class ImproveResumeResponse(BaseModel):
     """Response for resume improvement."""
@@ -906,6 +910,10 @@ class ResumeChange(BaseModel):
     )
     value: str | list[str] = Field(description="New content")
     reason: str = Field(description="Why this change helps match the JD")
+    fact_ids: list[str] = Field(
+        default_factory=list,
+        description="Verified fact IDs that support this change; empty = unverified.",
+    )
 
     @model_validator(mode="after")
     def _list_original_only_for_reorder(self) -> "ResumeChange":

@@ -6,12 +6,15 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.services.improver import (
+    _format_facts_for_prompt,
+    _wrap_legacy_to_blocks,
     extract_job_keywords,
     generate_skill_target_plan,
     generate_resume_diffs,
     improve_resume,
     verify_skill_target_plan,
 )
+from app.schemas.models import ResumeChange
 
 
 class TestExtractJobKeywords:
@@ -360,3 +363,185 @@ class TestImproveResume:
                 job_description="JD",
                 job_keywords={"required_skills": []},
             )
+
+
+# ---------------------------------------------------------------------------
+# RH-201: _wrap_legacy_to_blocks, _format_facts_for_prompt, fact_ids on change
+# ---------------------------------------------------------------------------
+
+
+class TestWrapLegacyToBlocks:
+    """Tests for _wrap_legacy_to_blocks()."""
+
+    def test_creates_blocks_from_description(self) -> None:
+        """Legacy description list is wrapped into bullet_blocks with correct ids."""
+        data: dict = {
+            "summary": "A great engineer.",
+            "workExperience": [
+                {
+                    "title": "Engineer",
+                    "company": "Acme",
+                    "description": ["Led team", "Built API"],
+                }
+            ],
+        }
+        result = _wrap_legacy_to_blocks(data)
+        blocks = result["workExperience"][0]["bullet_blocks"]
+        assert len(blocks) == 2
+        # First block
+        assert blocks[0]["id"] == "exp0_b0"
+        assert blocks[0]["active_variant_id"] == "exp0_b0_v0"
+        assert len(blocks[0]["variants"]) == 1
+        assert blocks[0]["variants"][0]["text"] == "Led team"
+        assert blocks[0]["variants"][0]["fact_ids"] == []
+        # Second block
+        assert blocks[1]["id"] == "exp0_b1"
+        assert blocks[1]["variants"][0]["text"] == "Built API"
+
+    def test_skips_existing_blocks(self) -> None:
+        """Entries that already have bullet_blocks are left unchanged."""
+        existing_block = {
+            "id": "exp0_b0",
+            "active_variant_id": "exp0_b0_v0",
+            "variants": [{"id": "exp0_b0_v0", "text": "Original", "tags": [], "fact_ids": ["f1"]}],
+        }
+        data: dict = {
+            "workExperience": [
+                {
+                    "description": ["Should be ignored"],
+                    "bullet_blocks": [existing_block],
+                }
+            ]
+        }
+        result = _wrap_legacy_to_blocks(data)
+        # bullet_blocks should be the same reference (unchanged)
+        assert result["workExperience"][0]["bullet_blocks"] == [existing_block]
+
+    def test_wraps_summary_string(self) -> None:
+        """A non-empty summary string becomes summary_blocks with one block."""
+        data: dict = {"summary": "Experienced developer.", "workExperience": []}
+        result = _wrap_legacy_to_blocks(data)
+        assert "summary_blocks" in result
+        blocks = result["summary_blocks"]
+        assert len(blocks) == 1
+        assert blocks[0]["id"] == "summary_b0"
+        assert blocks[0]["active_variant_id"] == "summary_b0_v0"
+        assert blocks[0]["variants"][0]["text"] == "Experienced developer."
+        assert blocks[0]["variants"][0]["fact_ids"] == []
+
+    def test_does_not_mutate_input(self) -> None:
+        """Input dict is not modified — result is a deep copy."""
+        data: dict = {
+            "summary": "Summary text",
+            "workExperience": [{"description": ["Bullet"]}],
+        }
+        original_we = data["workExperience"][0].copy()
+        _wrap_legacy_to_blocks(data)
+        assert "bullet_blocks" not in data["workExperience"][0]
+        assert data["workExperience"][0] == original_we
+
+
+class TestFormatFactsForPrompt:
+    """Tests for _format_facts_for_prompt()."""
+
+    def test_empty_list_returns_sentinel(self) -> None:
+        """Empty facts list returns the 'no facts' sentinel string."""
+        result = _format_facts_for_prompt([])
+        assert result == "No verified facts available."
+
+    def test_nonempty_facts_include_id_and_statement(self) -> None:
+        """Formatted output contains fact_id and statement for each fact."""
+        facts = [
+            {"fact_id": "f-001", "statement": "Reduced latency by 40%", "metrics_json": ""},
+            {"fact_id": "f-002", "statement": "Led team of 5 engineers", "metrics_json": ""},
+        ]
+        result = _format_facts_for_prompt(facts)
+        assert "VERIFIED FACTS" in result
+        assert "f-001" in result
+        assert "Reduced latency by 40%" in result
+        assert "f-002" in result
+        assert "Led team of 5 engineers" in result
+
+    def test_metrics_included_when_present(self) -> None:
+        """Metrics are appended when metrics_json is non-empty."""
+        facts = [
+            {
+                "fact_id": "f-003",
+                "statement": "Shipped product on time",
+                "metrics_json": '{"quarter": "Q3"}',
+            }
+        ]
+        result = _format_facts_for_prompt(facts)
+        assert "metrics:" in result
+        assert "Q3" in result
+
+
+class TestFactIdsOnResumeChange:
+    """fact_ids field is accepted by ResumeChange and defaults to empty list."""
+
+    def test_resume_change_accepts_fact_ids(self) -> None:
+        """ResumeChange can be constructed with a non-empty fact_ids list."""
+        change = ResumeChange(
+            path="workExperience[0].description[0]",
+            action="replace",
+            original="Old text",
+            value="New text",
+            reason="Better alignment",
+            fact_ids=["abc-123"],
+        )
+        assert change.fact_ids == ["abc-123"]
+
+    def test_resume_change_fact_ids_defaults_to_empty(self) -> None:
+        """fact_ids defaults to [] when not provided."""
+        change = ResumeChange(
+            path="summary",
+            action="replace",
+            original="Old",
+            value="New",
+            reason="Test",
+        )
+        assert change.fact_ids == []
+
+    @patch("app.services.improver.complete_json", new_callable=AsyncMock)
+    async def test_generate_resume_diffs_extracts_fact_ids(
+        self, mock_llm, sample_resume, sample_job_keywords
+    ) -> None:
+        """fact_ids from the LLM response are carried into each ResumeChange."""
+        mock_llm.return_value = {
+            "changes": [
+                {
+                    "path": "summary",
+                    "action": "replace",
+                    "original": sample_resume.get("summary", ""),
+                    "value": "Improved summary",
+                    "reason": "Better fit",
+                    "fact_ids": ["f-001", "f-002"],
+                }
+            ],
+            "strategy_notes": "test",
+        }
+        result = await generate_resume_diffs(
+            original_resume="# Resume",
+            job_description="JD",
+            job_keywords=sample_job_keywords,
+            original_resume_data=sample_resume,
+        )
+        assert len(result.changes) == 1
+        assert result.changes[0].fact_ids == ["f-001", "f-002"]
+
+    @patch("app.services.improver.complete_json", new_callable=AsyncMock)
+    async def test_facts_section_appears_in_prompt(
+        self, mock_llm, sample_resume, sample_job_keywords
+    ) -> None:
+        """facts_section content is injected into the prompt sent to the LLM."""
+        mock_llm.return_value = {"changes": [], "strategy_notes": ""}
+        await generate_resume_diffs(
+            original_resume="# Resume",
+            job_description="JD",
+            job_keywords=sample_job_keywords,
+            original_resume_data=sample_resume,
+            facts_section="VERIFIED FACTS (cite fact_id in every rewritten bullet):\n- [f-999] Some fact",
+        )
+        prompt = mock_llm.call_args.kwargs.get("prompt") or mock_llm.call_args.args[0]
+        assert "f-999" in prompt
+        assert "Some fact" in prompt

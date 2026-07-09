@@ -8,6 +8,7 @@ from difflib import SequenceMatcher
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from app.database import db
 from app.llm import complete_json
 from app.prompts import (
     CRITICAL_TRUTHFULNESS_RULES,
@@ -503,6 +504,111 @@ def verify_diff_result(
     return warnings
 
 
+def _wrap_legacy_to_blocks(resume_data_dict: dict[str, Any]) -> dict[str, Any]:
+    """Convert legacy description arrays into bullet_blocks / summary_blocks.
+
+    Operates on a deep copy of the input so the caller's data is never mutated.
+
+    For each work-experience entry that has a non-empty ``description`` list but
+    no ``bullet_blocks``, creates a BulletBlock dict per bullet.  The same
+    pattern applies to the top-level ``summary`` string → ``summary_blocks``.
+    Entries that already have blocks are left unchanged.
+
+    Args:
+        resume_data_dict: Raw resume data dict (ResumeData-compatible).
+
+    Returns:
+        Deep copy of the dict with ``bullet_blocks`` / ``summary_blocks``
+        populated from legacy fields where they were absent.
+    """
+    data = copy.deepcopy(resume_data_dict)
+
+    # Work experience bullets
+    work_experience = data.get("workExperience", [])
+    if isinstance(work_experience, list):
+        for exp_idx, experience in enumerate(work_experience):
+            if not isinstance(experience, dict):
+                continue
+            existing_blocks = experience.get("bullet_blocks")
+            if existing_blocks:
+                # Already has blocks — leave untouched
+                continue
+            description = experience.get("description", [])
+            if not isinstance(description, list) or not description:
+                continue
+            blocks: list[dict[str, Any]] = []
+            for i, desc_str in enumerate(description):
+                block_id = f"exp{exp_idx}_b{i}"
+                variant_id = f"{block_id}_v0"
+                blocks.append(
+                    {
+                        "id": block_id,
+                        "active_variant_id": variant_id,
+                        "variants": [
+                            {
+                                "id": variant_id,
+                                "text": desc_str,
+                                "tags": [],
+                                "fact_ids": [],
+                            }
+                        ],
+                    }
+                )
+            experience["bullet_blocks"] = blocks
+
+    # Summary block
+    existing_summary_blocks = data.get("summary_blocks")
+    if not existing_summary_blocks:
+        summary_str = data.get("summary", "")
+        if isinstance(summary_str, str) and summary_str.strip():
+            data["summary_blocks"] = [
+                {
+                    "id": "summary_b0",
+                    "active_variant_id": "summary_b0_v0",
+                    "variants": [
+                        {
+                            "id": "summary_b0_v0",
+                            "text": summary_str,
+                            "tags": [],
+                            "fact_ids": [],
+                        }
+                    ],
+                }
+            ]
+
+    return data
+
+
+def _format_facts_for_prompt(facts: list[dict[str, Any]]) -> str:
+    """Format a list of fact dicts into a prompt-ready string.
+
+    Each fact is rendered as a single line:
+      - [<fact_id>] <statement>  (metrics: <metrics_json>)
+
+    An empty list returns the sentinel string "No verified facts available."
+
+    Args:
+        facts: List of fact dicts from ``db.list_facts()``.  Expected keys:
+               ``fact_id``, ``statement``, ``metrics_json``.
+
+    Returns:
+        Formatted string block for inclusion in a prompt.
+    """
+    if not facts:
+        return "No verified facts available."
+
+    lines: list[str] = ["VERIFIED FACTS (cite fact_id in every rewritten bullet):"]
+    for fact in facts:
+        fact_id = fact.get("fact_id", "")
+        statement = fact.get("statement", "")
+        metrics = fact.get("metrics_json", "")
+        if metrics:
+            lines.append(f"- [{fact_id}] {statement}  (metrics: {metrics})")
+        else:
+            lines.append(f"- [{fact_id}] {statement}")
+    return "\n".join(lines)
+
+
 async def generate_resume_diffs(
     original_resume: str,
     job_description: str,
@@ -511,6 +617,7 @@ async def generate_resume_diffs(
     prompt_id: str | None = None,
     original_resume_data: dict[str, Any] | None = None,
     skill_targets: list[dict[str, Any]] | None = None,
+    facts_section: str = "",
 ) -> ImproveDiffResult:
     """Generate targeted resume diffs via LLM.
 
@@ -525,6 +632,7 @@ async def generate_resume_diffs(
         prompt_id: Strategy id (nudge/keywords/full)
         original_resume_data: Structured resume JSON
         skill_targets: Verified skill targets from the planning pass
+        facts_section: Pre-formatted VERIFIED FACTS block from _format_facts_for_prompt
 
     Returns:
         ImproveDiffResult with list of changes and strategy notes
@@ -555,6 +663,7 @@ async def generate_resume_diffs(
         resume_input = original_resume
 
     prompt = DIFF_IMPROVE_PROMPT.format(
+        facts_section=facts_section or "No verified facts available.",
         strategy_instruction=strategy_instruction,
         output_language=output_language,
         job_keywords=keywords_str,
@@ -581,6 +690,12 @@ async def generate_resume_diffs(
         if not isinstance(raw, dict):
             continue
         try:
+            raw_fact_ids = raw.get("fact_ids", [])
+            fact_ids: list[str] = (
+                [str(f) for f in raw_fact_ids if f]
+                if isinstance(raw_fact_ids, list)
+                else []
+            )
             changes.append(
                 ResumeChange(
                     path=str(raw.get("path", "")),
@@ -588,6 +703,7 @@ async def generate_resume_diffs(
                     original=raw.get("original"),
                     value=raw.get("value", ""),
                     reason=str(raw.get("reason", "")),
+                    fact_ids=fact_ids,
                 )
             )
         except Exception as e:

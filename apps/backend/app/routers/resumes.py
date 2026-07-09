@@ -49,6 +49,8 @@ from app.schemas import (
 from app.services.parser import parse_document, parse_resume_to_json, restore_dates_from_markdown
 from app.services.improver import (
     MONTH_PATTERN,
+    _format_facts_for_prompt,
+    _wrap_legacy_to_blocks,
     apply_diffs,
     extract_job_keywords,
     generate_improvements,
@@ -896,8 +898,29 @@ async def _improve_preview_flow(
     # Collect warnings throughout the process
     response_warnings: list[str] = []
 
+    # Initialise tracking variables used across branches for provenance reporting
+    from app.schemas.models import ResumeChange as _ResumeChange
+    facts: list[dict[str, Any]] = []
+    applied_changes: list[_ResumeChange] = []
+
     # Diff-based improvement: generate targeted changes, apply with verification
     if original_resume_data:
+        # Load verified facts for provenance-aware prompt
+        try:
+            facts = await db.list_facts()
+        except Exception as e:
+            logger.warning("Could not load facts for provenance context: %s", e)
+            facts = []
+        facts_section = _format_facts_for_prompt(facts)
+
+        # Wrap legacy descriptions into bullet_blocks for the LLM prompt context.
+        # We pass wrapped_resume_data only to generate_resume_diffs so the LLM
+        # can reference block IDs; apply_diffs continues to use original_resume_data
+        # (dict with description arrays) to avoid the @model_validator override that
+        # would undo diff changes when ResumeData is constructed from a dict that
+        # already has bullet_blocks.
+        wrapped_resume_data = _wrap_legacy_to_blocks(original_resume_data)
+
         skill_targets: list[dict[str, Any]] = []
         try:
             raw_skill_plan = await generate_skill_target_plan(
@@ -934,8 +957,9 @@ async def _improve_preview_flow(
             job_keywords=job_keywords,
             language=language,
             prompt_id=prompt_id,
-            original_resume_data=original_resume_data,
+            original_resume_data=wrapped_resume_data,
             skill_targets=skill_targets,
+            facts_section=facts_section,
         )
 
         improved_data, applied_changes, rejected_changes = apply_diffs(
@@ -1045,6 +1069,27 @@ async def _improve_preview_flow(
         if refinement_attempted:
             response_warnings.append(f"Refinement failed: {str(e)}")
 
+    # Provenance: fact coverage report + unverified changes (no fact_ids cited)
+    provenance: dict | None = None
+    unverified: list[dict] = []
+    try:
+        from app.services.provenance import check_provenance
+        prov = check_provenance(
+            ResumeData.model_validate(improved_data),
+            {f["fact_id"] for f in facts},
+        )
+        provenance = prov
+        unverified = [c.model_dump() for c in applied_changes if not c.fact_ids]
+        logger.info(
+            "Provenance: %d covered, %d uncovered, %d broken, %d unverified changes",
+            prov.get("covered", 0),
+            len(prov.get("uncovered", [])),
+            len(prov.get("broken", [])),
+            len(unverified),
+        )
+    except Exception as e:
+        logger.warning("Provenance check failed: %s", e)
+
     improved_text = json.dumps(improved_data, indent=2)
     preview_hash = _hash_improved_data(improved_data)
     preview_hashes = job.get("preview_hashes")
@@ -1109,6 +1154,8 @@ async def _improve_preview_flow(
             warnings=response_warnings,
             refinement_attempted=refinement_attempted,
             refinement_successful=refinement_successful,
+            provenance=provenance,
+            unverified=unverified,
         ),
     )
 
