@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.database import db
+from app.database import DuplicateConsideringError, db
 from app.services.improver import extract_job_keywords
 from app.schemas import (
     APPLICATION_STATUS_ORDER,
@@ -20,6 +20,7 @@ from app.schemas import (
     BulkStatusUpdate,
     InterestDimension,
     ManualApplicationCreate,
+    QuickCaptureCreate,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,62 @@ async def list_applications() -> ApplicationListResponse:
         logger.error("Failed to list applications: %s", e)
         raise HTTPException(status_code=500, detail="Failed to load applications. Please try again.")
     return ApplicationListResponse(columns=_group_by_status(applications))
+
+
+@router.post("/quick", response_model=ApplicationResponse, status_code=201)
+async def quick_capture_application(request: QuickCaptureCreate) -> ApplicationResponse:
+    """Quick-capture a considering card (<30 s, no tailored resume).
+
+    Creates a Job from the pasted JD text (or reuses an existing job with
+    identical content) and a considering Application with resume_id=NULL.
+    Returns 409 when a considering card for this exact job already exists
+    (same jd_text → same job_id → same NULL resume_id check fires).
+    """
+    # Reuse an existing job when the JD text is identical so that the
+    # considering-card dedup check can fire on the second submission.
+    existing_job = await db.get_job_by_content(request.jd_text)
+    if existing_job is not None:
+        job = existing_job
+        created_new_job = False
+    else:
+        job = await db.create_job(content=request.jd_text)
+        created_new_job = True
+
+    try:
+        application = await db.create_considering_application(
+            job_id=job["job_id"],
+            company=request.company,
+            role=request.role,
+        )
+    except DuplicateConsideringError as e:
+        logger.info("Duplicate considering application blocked: %s", e)
+        # Only clean up the job if we created it this request — don't delete
+        # a pre-existing job that may have other applications.
+        if created_new_job:
+            try:
+                await db.delete_job(job["job_id"])
+            except Exception as cleanup_error:
+                logger.warning("Failed to clean up orphan job %s: %s", job["job_id"], cleanup_error)
+        raise HTTPException(status_code=409, detail="A considering application for this job already exists.")
+    except Exception as e:
+        logger.error("Failed to create considering application: %s", e)
+        if created_new_job:
+            try:
+                await db.delete_job(job["job_id"])
+            except Exception as cleanup_error:
+                logger.warning("Failed to clean up orphan job %s: %s", job["job_id"], cleanup_error)
+        raise HTTPException(status_code=500, detail="Failed to create application. Please try again.")
+
+    # Best-effort: cache company/role on the job for later reuse — never 500.
+    company = request.company
+    role = request.role
+    if company or role:
+        try:
+            await db.update_job(job["job_id"], {"company": company, "role": role})
+        except Exception as e:
+            logger.warning("Failed to cache company/role on job %s: %s", job["job_id"], e)
+
+    return ApplicationResponse(**application)
 
 
 @router.post("", response_model=ApplicationResponse)

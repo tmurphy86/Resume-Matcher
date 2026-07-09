@@ -72,6 +72,7 @@ from app.schemas.applications import (
     InterestDimension,
     InterestSignal,
     ManualApplicationCreate,
+    QuickCaptureCreate,
 )
 
 __all__ = [
@@ -138,6 +139,7 @@ __all__ = [
     "ApplicationDetailResponse",
     "ApplicationListResponse",
     "ManualApplicationCreate",
+    "QuickCaptureCreate",
     "ApplicationUpdate",
     "BulkStatusUpdate",
     "BulkDelete",

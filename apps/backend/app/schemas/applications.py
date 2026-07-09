@@ -22,8 +22,9 @@ class InterestDimension(BaseModel):
 
 
 class ApplicationStatus(str, Enum):
-    """The seven stable tracker columns (decoupled from i18n labels)."""
+    """The eight stable tracker columns (decoupled from i18n labels)."""
 
+    considering = "considering"
     saved = "saved"
     applied = "applied"
     no_response = "no_response"
@@ -37,12 +38,21 @@ class ApplicationStatus(str, Enum):
 APPLICATION_STATUS_ORDER: list[str] = [s.value for s in ApplicationStatus]
 
 
+class QuickCaptureCreate(BaseModel):
+    """Create a considering card from a pasted JD (no tailored resume required)."""
+
+    jd_text: str = Field(min_length=1)
+    jd_url: str | None = None  # stored as text; no fetching
+    company: str | None = None
+    role: str | None = None
+
+
 class ApplicationResponse(BaseModel):
     """A single tracker card."""
 
     application_id: str
     job_id: str
-    resume_id: str
+    resume_id: str | None = None
     master_resume_id: str | None = None
     status: ApplicationStatus
     company: str | None = None

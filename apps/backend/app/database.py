@@ -29,6 +29,10 @@ from app.models import ApiKey, Application, Fact, Improvement, Job, Resume
 
 logger = logging.getLogger(__name__)
 
+
+class DuplicateConsideringError(Exception):
+    """Raised when a considering application already exists for a given job."""
+
 # Columns that are first-class on the jobs table; everything else the pipeline
 # attaches dynamically is stored in ``metadata_json`` (see Job model).
 _JOB_CORE_FIELDS = frozenset({"job_id", "content", "resume_id", "created_at"})
@@ -404,6 +408,20 @@ class Database:
             row = await session.get(Job, job_id)
             return self._job_to_dict(row) if row else None
 
+    async def get_job_by_content(self, content: str) -> dict[str, Any] | None:
+        """Find the most-recently created job with an exact content match.
+
+        Used by the quick-capture path to detect duplicate jd_text submissions
+        so that same-content JDs reuse the same job_id (enabling the
+        considering-card dedup check to fire on the second call).
+        """
+        async with self._session() as session:
+            result = await session.execute(
+                select(Job).where(Job.content == content).order_by(Job.created_at.desc()).limit(1)
+            )
+            row = result.scalars().first()
+            return self._job_to_dict(row) if row else None
+
     async def update_job(
         self, job_id: str, updates: dict[str, Any]
     ) -> dict[str, Any] | None:
@@ -509,7 +527,7 @@ class Database:
     async def create_application(
         self,
         job_id: str,
-        resume_id: str,
+        resume_id: str | None = None,
         master_resume_id: str | None = None,
         status: str = "applied",
         company: str | None = None,
@@ -521,17 +539,21 @@ class Database:
         """Create a tracker card, deduped on (job_id, resume_id).
 
         If a card for the same job+resume already exists it is returned as-is
-        (survives double-submit / retried confirms).
+        (survives double-submit / retried confirms). NULL resume_id pairs are
+        not deduped here — use create_considering_application for that path.
         """
         async with self._session() as session:
-            existing = await session.execute(
-                select(Application).where(
-                    Application.job_id == job_id, Application.resume_id == resume_id
+            # Only dedup non-null resume_id pairs; SQLite treats NULLs as
+            # distinct in unique constraints so the DB won't catch them.
+            if resume_id is not None:
+                existing = await session.execute(
+                    select(Application).where(
+                        Application.job_id == job_id, Application.resume_id == resume_id
+                    )
                 )
-            )
-            found = existing.scalars().first()
-            if found is not None:
-                return self._application_to_dict(found)
+                found = existing.scalars().first()
+                if found is not None:
+                    return self._application_to_dict(found)
 
             now = _now()
             if applied_at is None and status != "saved":
@@ -574,6 +596,52 @@ class Database:
                     )
                     return self._application_to_dict(found)
                 raise
+            return self._application_to_dict(row)
+
+    async def create_considering_application(
+        self,
+        job_id: str,
+        company: str | None = None,
+        role: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a considering card (no resume yet) for a job.
+
+        Raises DuplicateConsideringError when an application with
+        resume_id IS NULL already exists for this job, preventing duplicate
+        considering-cards. (SQLite treats NULLs as distinct in unique
+        constraints, so app-level enforcement is required.)
+        """
+        async with self._session() as session:
+            existing = await session.execute(
+                select(Application).where(
+                    Application.job_id == job_id,
+                    Application.resume_id.is_(None),
+                )
+            )
+            found = existing.scalars().first()
+            if found is not None:
+                raise DuplicateConsideringError(
+                    f"A considering application already exists for job={job_id}"
+                )
+
+            now = _now()
+            position = await self._next_position(session, "considering")
+            row = Application(
+                application_id=str(uuid4()),
+                job_id=job_id,
+                resume_id=None,
+                master_resume_id=None,
+                status="considering",
+                company=company,
+                role=role,
+                applied_at=None,
+                notes=None,
+                position=position,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(row)
+            await session.commit()
             return self._application_to_dict(row)
 
     async def list_applications(self, status: str | None = None) -> list[dict[str, Any]]:

@@ -109,7 +109,8 @@ class Application(Base):
     application_id: Mapped[str] = mapped_column(String, primary_key=True)
     job_id: Mapped[str] = mapped_column(String, index=True)
     # The applied/tailored resume shown in the modal and opened by "Edit".
-    resume_id: Mapped[str] = mapped_column(String, index=True)
+    # Nullable to support the "considering" quick-capture stage (no resume yet).
+    resume_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
     # Optional base resume the tailored one descends from (powers "stack" grouping).
     master_resume_id: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, default="applied", index=True)
