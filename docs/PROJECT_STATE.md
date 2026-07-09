@@ -23,29 +23,18 @@ Recommended dispatch order: wave 1 = RH-201, RH-203, RH-207, RH-209 (independent
 - **RH-107** `feat(tracker): RH-107 considering column + interest quick-tags` (3fa1e83) — frontend: considering column, interest signal chips + panel, quick-capture mode in add dialog; all 6 locales updated (also fixed fr.json parity gap); 4 new API tests. ✅
 
 ## In flight
-_(none — wave 1 complete)_
+_(none — wave 2 complete)_
 
 ## Blockers
 _(none)_
 
 ## DECISION NEEDED
+_(none)_
 
-### RH-208: `.docx` export — dependency choice
-
-Two options. Eng lead recommendation: **Option A (python-docx)**.
-
-**Option A — python-docx**
-- Pros: Pure Python, deterministic output, no subprocess, testable with `python-docx` itself (open the file, assert structure), no new service boundary, small dep footprint (~500KB).
-- Cons: Must hand-map every ResumeData field to DOCX constructs; styling is imperative (add paragraph, set font, etc.); tables require explicit layout code. Any layout change = Python code change.
-- Test strategy: `docx_export.py` generates a BytesIO; test opens it with `python-docx`, asserts heading text, paragraph count, bullet presence. Fully deterministic, zero LLM.
-
-**Option B — html→docx (pypandoc or mammoth)**
-- Pros: Reuses the existing HTML/CSS render path; layout changes in CSS propagate to DOCX automatically.
-- Cons: Requires `pandoc` system binary (complicates Docker / CI); mammoth reverses the direction (docx→html), not html→docx; output fidelity is lower (CSS ignored); harder to write a deterministic structural test.
-
-**Eng lead recommendation:** Option A (python-docx). The mapping cost is one-time and the result is fully testable without system deps. Option B's pandoc dependency is the main risk for a single-developer local environment.
-
-**Program lead: approve Option A or B, or propose Option C, before wave 2 dispatches RH-208.**
+## Shipped (P2 wave 2 — 2026-07-09)
+- **RH-202** `feat(interview-mode): RH-202 gap questions + answer-to-fact loop` — `GAP_QUESTIONS_PROMPT`; `services/interview_mode.py` (`get_gap_questions`, `answer_gap_question`); `POST /facts/gap-questions` + `POST /facts/answer`; `AnswerGapRequest` schema; refiner Pass 1 augmented with fact keywords; `conftest.py` `isolated_db` extended; 22 new tests (18 service + 4 integration); 625 backend passing. ✅
+- **RH-204** `feat(facts): RH-204 facts library page` — `/facts` page with extract modal, inline edit, tag/context filter, duplicate annotations; `lib/api/facts.ts` client; fr.json facts section; 201 frontend passing. ✅
+- **RH-208** `feat(export): RH-208 .docx export endpoint` — `services/docx_export.py` (python-docx, ATS-safe structural fidelity); `GET /resumes/{id}/export/docx`; 585/585 backend passing. ✅
 
 ## Shipped (P2 wave 1 — 2026-07-09)
 - **RH-209** `fix(tests): RH-209 green suite + stale column comment` (491f325) — localStorage mock in vitest.setup.ts; 11 pre-existing frontend failures fixed (194/194 passing); "seven"→"eight" comments in kanban-board.tsx. ✅
@@ -59,3 +48,5 @@ Two options. Eng lead recommendation: **Option A (python-docx)**.
 - 2026-07-09 — Eng lead (wave 2): dispatched RH-102/104/107 in parallel. All 3 agents passed; integrated to main (manual patch for wave-1/wave-2 worktree overlap on backend, lint fix for pre-existing ats-score-card.tsx + fr.json parity). Suite: 567 backend (+21 new), 183 frontend passed (+5 new; 11 pre-existing failures in resume-wizard-page/viewer unchanged). **P1 complete.**
 - 2026-07-09 — Program lead: P1 reviewed and ACCEPTED (docs/reviews/P1-review.md). Key findings: tailoring pipeline still provenance-blind (F1 → RH-201/202); extraction lacks dedup (F2 → RH-203); no frontend surface for facts/variants (F3 → RH-204/205); pre-existing frontend failures (F4 → RH-209). P2 tickets RH-201…210 cut. One DECISION pending in RH-208 (docx dependency) — eng lead proposes, program lead approves.
 - 2026-07-09 — Eng lead (P2 wave 1): dispatched RH-201/203/207/209 in parallel (RH-209 committed directly; RH-203/207/201 cherry-picked from worktrees). Suite: 585 backend (+18 new), 201 frontend (+7 new). **P2 wave 1 complete.** RH-208 decision awaiting program lead approval (see DECISION NEEDED above). Wave 2 ready to dispatch: RH-202, RH-204; RH-208 pending decision.
+- 2026-07-09 — Program lead: RH-208 **Option A (python-docx) APPROVED** → ADR-004, with scope clarification (ATS-safe structure over pixel fidelity; Murphy PDF remains the pixel-faithful artifact). BACKLOG RH-208 updated accordingly. Wave 2 (RH-202, RH-204, RH-208) cleared for dispatch.
+- 2026-07-09 — Eng lead (P2 wave 2): manual integration of RH-202/204/208 from worktrees (pre-P1 base → copy new files + surgical patch). RH-202 adds interview mode (gap Q&A → fact persistence); RH-204 adds facts library page; RH-208 adds docx export. Suite: 625 backend (+40 new), 201 frontend. **P2 wave 2 complete.** Wave 3 ready: RH-205, RH-206, RH-210.

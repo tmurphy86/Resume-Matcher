@@ -216,6 +216,17 @@ async def isolated_db(tmp_path, monkeypatch):
             continue
         if hasattr(module, "db"):
             monkeypatch.setattr(module, "db", test_db)
+    # Patch service modules that import db directly (e.g. for gap Q&A loop)
+    for service_name in (
+        "fact_extractor",
+        "interview_mode",
+    ):
+        try:
+            module = importlib.import_module(f"app.services.{service_name}")
+        except ModuleNotFoundError:
+            continue
+        if hasattr(module, "db"):
+            monkeypatch.setattr(module, "db", test_db)
     try:
         yield test_db
     finally:

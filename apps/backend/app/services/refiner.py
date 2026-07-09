@@ -14,6 +14,7 @@ import re
 from functools import lru_cache
 from typing import Any
 
+from app.database import db
 from app.llm import complete_json
 from app.prompts.refinement import (
     AI_PHRASE_BLACKLIST,
@@ -29,6 +30,9 @@ from app.schemas.refinement import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Token boundary regex for extracting skill/tech terms from fact statements
+_WORD_BOUNDARY_RE = re.compile(r"(?<!\w)([A-Za-z][A-Za-z0-9\+\#\-\.]{1,30})(?!\w)")
 
 # LLM-012: Job description truncation limits
 MAX_JD_LENGTH = 2000
@@ -51,6 +55,38 @@ def _keyword_in_text(keyword: str, text: str) -> bool:
 def _normalize_skill_key(skill: str) -> str:
     """Normalize a skill for case-insensitive comparisons."""
     return re.sub(r"\s+", " ", skill.strip()).casefold()
+
+
+async def _extract_fact_keywords(facts: list[dict[str, Any]]) -> list[str]:
+    """Extract skill/technology terms from verified fact statements.
+
+    Scans each fact's statement for capitalized tokens and tech-flavored words
+    (2-30 chars, may include +, #, -, .) that are likely skills or technologies.
+    ``user_answered`` facts (from the gap Q&A loop) are included so freshly
+    answered facts influence the next tailor pass.
+
+    Args:
+        facts: List of fact dicts from ``db.list_facts()``.
+
+    Returns:
+        Deduplicated list of candidate keyword strings.
+    """
+    seen: set[str] = set()
+    keywords: list[str] = []
+
+    for fact in facts:
+        statement = fact.get("statement", "")
+        if not isinstance(statement, str):
+            continue
+        for match in _WORD_BOUNDARY_RE.finditer(statement):
+            token = match.group(1)
+            if token[0].isupper() or any(c in token for c in ("+", "#", ".", "-")):
+                key = token.casefold()
+                if key not in seen:
+                    seen.add(key)
+                    keywords.append(token)
+
+    return keywords
 
 
 def _extract_jd_skill_keys(
@@ -104,16 +140,41 @@ async def refine_resume(
     # Pass 1: Keyword injection (if enabled)
     if config.enable_keyword_injection:
         keyword_analysis = analyze_keyword_gaps(job_keywords, current, master_resume)
-        if keyword_analysis.injectable_keywords:
+
+        # RH-202: Augment injectable keywords with terms from verified facts
+        # (including freshly user_answered facts from the gap Q&A loop).
+        try:
+            facts = await db.list_facts()
+            fact_keywords = await _extract_fact_keywords(facts)
+            if fact_keywords:
+                logger.info(
+                    "Augmenting keyword injection with %d fact-derived terms",
+                    len(fact_keywords),
+                )
+        except Exception as e:
+            logger.warning("Failed to load facts for keyword augmentation: %s", e)
+            fact_keywords = []
+
+        # Merge fact keywords with gap-analysis injectable keywords, deduping.
+        all_injectable = list(keyword_analysis.injectable_keywords)
+        injectable_lower = {k.casefold() for k in all_injectable}
+        for kw in fact_keywords:
+            if kw.casefold() not in injectable_lower:
+                all_injectable.append(kw)
+                injectable_lower.add(kw.casefold())
+
+        if all_injectable:
             logger.info(
-                "Injecting %d keywords: %s",
+                "Injecting %d keywords (gap=%d, fact=%d): %s",
+                len(all_injectable),
                 len(keyword_analysis.injectable_keywords),
-                keyword_analysis.injectable_keywords,
+                len(fact_keywords),
+                all_injectable,
             )
             try:
                 current = await inject_keywords(
                     current,
-                    keyword_analysis.injectable_keywords,
+                    all_injectable,
                     master_resume,
                     job_description,
                 )

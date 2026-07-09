@@ -53,3 +53,12 @@ class DuplicateFactResponse(BaseModel):
     status: Literal["duplicate"]
     existing_fact_id: str
     statement: str
+
+
+class AnswerGapRequest(BaseModel):
+    """Request to persist a human answer to a gap question as a verified fact."""
+
+    question: str
+    answer: str
+    job_id: str
+    resume_id: str

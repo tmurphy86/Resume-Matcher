@@ -6,8 +6,8 @@ from typing import Any, Union
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import db
-from app.schemas.facts import DuplicateFactResponse, FactCreate, FactResponse, FactUpdate
-from app.services import fact_extractor
+from app.schemas.facts import AnswerGapRequest, DuplicateFactResponse, FactCreate, FactResponse, FactUpdate
+from app.services import fact_extractor, interview_mode
 
 logger = logging.getLogger(__name__)
 
@@ -104,3 +104,35 @@ async def confirm_facts_endpoint(
             responses.append(FactResponse(**result))
 
     return responses
+
+
+@router.post("/gap-questions", response_model=list[dict])
+async def get_gap_questions_endpoint(
+    job_id: str = Query(..., description="ID of the target job"),
+    resume_id: str = Query(..., description="ID of the candidate's resume"),
+) -> list[dict[str, Any]]:
+    """Generate gap questions for JD requirements not covered by existing facts.
+
+    Analyzes the job description against the verified fact base and the
+    resume's content to surface requirements with no supporting evidence.
+    Returns a list of targeted questions to elicit verifiable facts.
+    """
+    return await interview_mode.get_gap_questions(job_id=job_id, resume_id=resume_id)
+
+
+@router.post("/answer", response_model=dict, status_code=201)
+async def answer_gap_question_endpoint(
+    request: AnswerGapRequest,
+) -> dict[str, Any]:
+    """Persist a human answer as a verified fact; return fact + updated gap list.
+
+    Stores the answer as a fact with ``confidence="user_answered"`` and
+    ``source="interview"``, then re-runs gap analysis so the caller can
+    continue the Q&A loop.
+    """
+    return await interview_mode.answer_gap_question(
+        question=request.question,
+        answer=request.answer,
+        job_id=request.job_id,
+        resume_id=request.resume_id,
+    )

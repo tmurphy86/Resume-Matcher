@@ -1,5 +1,7 @@
 """Integration tests for the facts API (real isolated DB)."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -198,3 +200,145 @@ class TestGetFactResponseSchema:
         assert body["confidence"] == "user_answered"
         assert "created_at" in body
         assert "updated_at" in body
+
+
+# ---------------------------------------------------------------------------
+# RH-202: Gap questions + answer flow (integration with real DB, mocked LLM)
+# ---------------------------------------------------------------------------
+
+_PROCESSED_DATA = {
+    "personalInfo": {"name": "Jane Doe"},
+    "summary": "Backend engineer.",
+    "workExperience": [
+        {
+            "title": "Engineer",
+            "company": "Acme",
+            "description": ["Built REST APIs using FastAPI"],
+        }
+    ],
+    "education": [],
+    "personalProjects": [],
+    "additional": {"technicalSkills": ["Python", "FastAPI"]},
+    "customSections": {},
+}
+
+_LLM_QUESTIONS_RESPONSE = {
+    "questions": [
+        {
+            "question": "Describe a project where you used Kubernetes.",
+            "gap_type": "skill",
+            "jd_keyword": "Kubernetes",
+        }
+    ]
+}
+
+
+class TestGapQuestionsAndAnswerFlow:
+    @patch("app.services.interview_mode.extract_job_keywords", new_callable=AsyncMock)
+    @patch("app.services.interview_mode.complete_json", new_callable=AsyncMock)
+    async def test_gap_questions_returns_200(
+        self, mock_llm: AsyncMock, mock_kw: AsyncMock, isolated_db
+    ) -> None:
+        """POST /facts/gap-questions returns 200 with a list of question dicts."""
+        mock_kw.return_value = {
+            "required_skills": ["Kubernetes"],
+            "preferred_skills": [],
+            "key_responsibilities": [],
+        }
+        mock_llm.return_value = _LLM_QUESTIONS_RESPONSE
+
+        # Create job and resume in the isolated DB
+        job = await isolated_db.create_job(content="Need Kubernetes and FastAPI skills.")
+        resume = await isolated_db.create_resume(
+            filename="test.pdf",
+            content="Backend engineer.",
+            processed_data=_PROCESSED_DATA,
+            is_master=True,
+        )
+
+        async with _client() as client:
+            resp = await client.post(
+                "/api/v1/facts/gap-questions",
+                params={"job_id": job["job_id"], "resume_id": resume["resume_id"]},
+            )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) == 1
+        assert body[0]["question"] == _LLM_QUESTIONS_RESPONSE["questions"][0]["question"]
+        assert body[0]["gap_type"] == "skill"
+        assert body[0]["jd_keyword"] == "Kubernetes"
+
+    @patch("app.services.interview_mode.extract_job_keywords", new_callable=AsyncMock)
+    @patch("app.services.interview_mode.complete_json", new_callable=AsyncMock)
+    async def test_answer_persists_fact_and_returns_201(
+        self, mock_llm: AsyncMock, mock_kw: AsyncMock, isolated_db
+    ) -> None:
+        """POST /facts/answer returns 201, persists fact with correct confidence."""
+        mock_kw.return_value = {
+            "required_skills": ["Kubernetes"],
+            "preferred_skills": [],
+            "key_responsibilities": [],
+        }
+        mock_llm.return_value = {"questions": []}  # gap refresh returns empty
+
+        job = await isolated_db.create_job(content="Need Kubernetes skills.")
+        resume = await isolated_db.create_resume(
+            filename="test.pdf",
+            content="Resume text.",
+            processed_data=_PROCESSED_DATA,
+            is_master=True,
+        )
+
+        async with _client() as client:
+            resp = await client.post(
+                "/api/v1/facts/answer",
+                json={
+                    "question": "Describe your Kubernetes experience.",
+                    "answer": "Managed 3 Kubernetes clusters in production for 2 years.",
+                    "job_id": job["job_id"],
+                    "resume_id": resume["resume_id"],
+                },
+            )
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert "fact" in body
+        assert "gap_questions" in body
+
+        fact = body["fact"]
+        assert fact["confidence"] == "user_answered"
+        assert fact["source"] == "interview"
+        assert fact["context"] == job["job_id"]
+        assert "interview" in fact["tags_json"]
+        assert "user_answered" in fact["tags_json"]
+
+        # Verify fact was actually persisted in the DB
+        all_facts = await isolated_db.list_facts()
+        assert any(f["fact_id"] == fact["fact_id"] for f in all_facts)
+
+    async def test_gap_questions_job_not_found_returns_404(self, isolated_db) -> None:
+        """POST /facts/gap-questions with unknown job_id → 404."""
+        resume = await isolated_db.create_resume(
+            filename="test.pdf",
+            content="Resume.",
+            processed_data=_PROCESSED_DATA,
+            is_master=True,
+        )
+        async with _client() as client:
+            resp = await client.post(
+                "/api/v1/facts/gap-questions",
+                params={"job_id": "nonexistent-job", "resume_id": resume["resume_id"]},
+            )
+        assert resp.status_code == 404
+
+    async def test_gap_questions_resume_not_found_returns_404(self, isolated_db) -> None:
+        """POST /facts/gap-questions with unknown resume_id → 404."""
+        job = await isolated_db.create_job(content="Need skills.")
+        async with _client() as client:
+            resp = await client.post(
+                "/api/v1/facts/gap-questions",
+                params={"job_id": job["job_id"], "resume_id": "nonexistent-resume"},
+            )
+        assert resp.status_code == 404

@@ -1,5 +1,6 @@
 """LLM prompt templates."""
 
+from app.prompts.interview_mode import GAP_QUESTIONS_PROMPT
 from app.prompts.templates import (
     CRITICAL_TRUTHFULNESS_RULES,
     DEFAULT_IMPROVE_PROMPT_ID,
@@ -56,4 +57,5 @@ __all__ = [
     "REQUIRED_FEATURE_PROMPT_PLACEHOLDERS",
     "validate_prompt_placeholders",
     "get_language_name",
+    "GAP_QUESTIONS_PROMPT",
 ]
