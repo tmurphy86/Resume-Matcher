@@ -45,7 +45,8 @@
     "settings": "Paramètres",
     "backToDashboard": "Retour au tableau de bord",
     "goToSettings": "Accéder aux paramètres",
-    "applicationTracker": "Suivi des candidatures"
+    "applicationTracker": "Suivi des candidatures",
+    "facts": "Bibliothèque de faits"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1045,6 +1046,39 @@
       "projectFollowUps": "Approfondissements sur les projets",
       "skillGaps": "Lacunes de compétences",
       "talkingPoints": "Points clés à aborder"
+    }
+  },
+  "facts": {
+    "title": "Bibliothèque de faits",
+    "extractButton": "Extraire du CV principal",
+    "filterByTag": "Filtrer par étiquette",
+    "filterByContext": "Filtrer par contexte",
+    "table": {
+      "statement": "Énoncé",
+      "context": "Contexte",
+      "source": "Source",
+      "tags": "Étiquettes",
+      "confidence": "Confiance",
+      "actions": "Actions"
+    },
+    "empty": "Aucun fait pour l'instant. Extrayez depuis votre CV principal pour commencer.",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer ce fait ?",
+    "extractModal": {
+      "title": "Extraire des faits",
+      "description": "Examinez et confirmez les faits candidats extraits de votre CV principal.",
+      "confirmSelected": "Confirmer la sélection",
+      "duplicate": "Doublon d'un fait existant",
+      "noMasterResume": "Aucun CV principal trouvé. Veuillez en télécharger un d'abord."
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des faits.",
+      "extractFailed": "Extraction échouée. Veuillez réessayer.",
+      "saveFailed": "Échec de l'enregistrement du fait.",
+      "deleteFailed": "Échec de la suppression du fait."
     }
   }
 }

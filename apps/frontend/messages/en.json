@@ -45,7 +45,8 @@
     "settings": "Settings",
     "backToDashboard": "Back to Dashboard",
     "goToSettings": "Go to Settings",
-    "applicationTracker": "Application Tracker"
+    "applicationTracker": "Application Tracker",
+    "facts": "Facts Library"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1026,6 +1027,39 @@
       "loadFailed": "Could not load applications.",
       "moveFailed": "Could not move the application.",
       "deleteFailed": "Could not delete the application(s)."
+    }
+  },
+  "facts": {
+    "title": "Facts Library",
+    "extractButton": "Extract from master resume",
+    "filterByTag": "Filter by tag",
+    "filterByContext": "Filter by context",
+    "table": {
+      "statement": "Statement",
+      "context": "Context",
+      "source": "Source",
+      "tags": "Tags",
+      "confidence": "Confidence",
+      "actions": "Actions"
+    },
+    "empty": "No facts yet. Extract from your master resume to get started.",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this fact?",
+    "extractModal": {
+      "title": "Extract Facts",
+      "description": "Review and confirm candidate facts extracted from your master resume.",
+      "confirmSelected": "Confirm selected",
+      "duplicate": "Duplicate of existing fact",
+      "noMasterResume": "No master resume found. Upload one first."
+    },
+    "errors": {
+      "loadFailed": "Failed to load facts.",
+      "extractFailed": "Extraction failed. Please try again.",
+      "saveFailed": "Failed to save fact.",
+      "deleteFailed": "Failed to delete fact."
     }
   },
   "interviewPrep": {

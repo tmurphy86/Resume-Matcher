@@ -45,7 +45,8 @@
     "settings": "Configuración",
     "backToDashboard": "Volver al Panel",
     "goToSettings": "Ir a Configuración",
-    "applicationTracker": "Seguimiento de candidaturas"
+    "applicationTracker": "Seguimiento de candidaturas",
+    "facts": "Biblioteca de hechos"
   },
   "dashboard": {
     "title": "Panel",
@@ -1026,6 +1027,39 @@
       "loadFailed": "No se pudieron cargar las candidaturas.",
       "moveFailed": "No se pudo mover la candidatura.",
       "deleteFailed": "No se pudieron eliminar las candidaturas."
+    }
+  },
+  "facts": {
+    "title": "Biblioteca de hechos",
+    "extractButton": "Extraer del currículum principal",
+    "filterByTag": "Filtrar por etiqueta",
+    "filterByContext": "Filtrar por contexto",
+    "table": {
+      "statement": "Enunciado",
+      "context": "Contexto",
+      "source": "Fuente",
+      "tags": "Etiquetas",
+      "confidence": "Confianza",
+      "actions": "Acciones"
+    },
+    "empty": "Aún no hay hechos. Extrae del currículum principal para comenzar.",
+    "edit": "Editar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "deleteConfirm": "¿Eliminar este hecho?",
+    "extractModal": {
+      "title": "Extraer hechos",
+      "description": "Revisa y confirma los hechos candidatos extraídos de tu currículum principal.",
+      "confirmSelected": "Confirmar seleccionados",
+      "duplicate": "Duplicado de un hecho existente",
+      "noMasterResume": "No se encontró currículum principal. Sube uno primero."
+    },
+    "errors": {
+      "loadFailed": "Error al cargar hechos.",
+      "extractFailed": "Extracción fallida. Por favor, inténtalo de nuevo.",
+      "saveFailed": "Error al guardar el hecho.",
+      "deleteFailed": "Error al eliminar el hecho."
     }
   },
   "interviewPrep": {

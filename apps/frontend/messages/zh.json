@@ -45,7 +45,8 @@
     "settings": "设置",
     "backToDashboard": "返回仪表板",
     "goToSettings": "前往设置",
-    "applicationTracker": "申请追踪"
+    "applicationTracker": "申请追踪",
+    "facts": "事实库"
   },
   "dashboard": {
     "title": "仪表板",
@@ -1026,6 +1027,39 @@
       "loadFailed": "无法加载申请。",
       "moveFailed": "无法移动该申请。",
       "deleteFailed": "无法删除该申请。"
+    }
+  },
+  "facts": {
+    "title": "事实库",
+    "extractButton": "从主简历提取",
+    "filterByTag": "按标签筛选",
+    "filterByContext": "按上下文筛选",
+    "table": {
+      "statement": "陈述",
+      "context": "上下文",
+      "source": "来源",
+      "tags": "标签",
+      "confidence": "置信度",
+      "actions": "操作"
+    },
+    "empty": "暂无事实。从主简历提取以开始。",
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "deleteConfirm": "删除此事实？",
+    "extractModal": {
+      "title": "提取事实",
+      "description": "审查并确认从主简历中提取的候选事实。",
+      "confirmSelected": "确认所选",
+      "duplicate": "与现有事实重复",
+      "noMasterResume": "未找到主简历。请先上传一份。"
+    },
+    "errors": {
+      "loadFailed": "加载事实失败。",
+      "extractFailed": "提取失败。请重试。",
+      "saveFailed": "保存事实失败。",
+      "deleteFailed": "删除事实失败。"
     }
   },
   "interviewPrep": {

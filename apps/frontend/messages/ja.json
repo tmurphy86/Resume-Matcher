@@ -45,7 +45,8 @@
     "settings": "設定",
     "backToDashboard": "ダッシュボードに戻る",
     "goToSettings": "設定へ",
-    "applicationTracker": "応募トラッカー"
+    "applicationTracker": "応募トラッカー",
+    "facts": "ファクトライブラリ"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1026,6 +1027,39 @@
       "loadFailed": "応募を読み込めませんでした。",
       "moveFailed": "応募を移動できませんでした。",
       "deleteFailed": "応募を削除できませんでした。"
+    }
+  },
+  "facts": {
+    "title": "ファクトライブラリ",
+    "extractButton": "マスター履歴書から抽出",
+    "filterByTag": "タグで絞り込む",
+    "filterByContext": "コンテキストで絞り込む",
+    "table": {
+      "statement": "ステートメント",
+      "context": "コンテキスト",
+      "source": "出典",
+      "tags": "タグ",
+      "confidence": "信頼度",
+      "actions": "操作"
+    },
+    "empty": "まだファクトがありません。マスター履歴書から抽出して始めましょう。",
+    "edit": "編集",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "deleteConfirm": "このファクトを削除しますか？",
+    "extractModal": {
+      "title": "ファクトを抽出",
+      "description": "マスター履歴書から抽出した候補ファクトを確認・確定してください。",
+      "confirmSelected": "選択を確定",
+      "duplicate": "既存のファクトと重複",
+      "noMasterResume": "マスター履歴書が見つかりません。先にアップロードしてください。"
+    },
+    "errors": {
+      "loadFailed": "ファクトの読み込みに失敗しました。",
+      "extractFailed": "抽出に失敗しました。もう一度お試しください。",
+      "saveFailed": "ファクトの保存に失敗しました。",
+      "deleteFailed": "ファクトの削除に失敗しました。"
     }
   },
   "interviewPrep": {
