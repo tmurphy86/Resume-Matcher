@@ -5,6 +5,9 @@ import {
   createApplication,
   deleteApplication,
   updateApplication,
+  quickCaptureApplication,
+  getInterestDimensions,
+  APPLICATION_STATUS_ORDER,
 } from '@/lib/api/tracker';
 import { llmProviderToKeyProvider } from '@/lib/api/config';
 
@@ -101,5 +104,51 @@ describe('tracker API client', () => {
   it('surfaces the backend detail message on failure', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ detail: 'boom' }), { status: 500 }));
     await expect(deleteApplication('x')).rejects.toThrow('boom');
+  });
+
+  it('quickCaptureApplication POSTs to /applications/quick with jd_text payload', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ application_id: 'q1', status: 'considering' }), {
+        status: 200,
+      })
+    );
+    await quickCaptureApplication({ jd_text: 'Software engineer role', company: 'Acme' });
+    const { url, options } = lastCall();
+    expect(url).toContain('/applications/quick');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(String(options.body))).toMatchObject({
+      jd_text: 'Software engineer role',
+      company: 'Acme',
+    });
+  });
+
+  it('getInterestDimensions GETs /applications/interest-dimensions', async () => {
+    const dims = [
+      { id: 'mission', label: 'Mission' },
+      { id: 'growth', label: 'Growth' },
+    ];
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(dims), { status: 200 }));
+    const result = await getInterestDimensions();
+    const { url } = lastCall();
+    expect(url).toContain('/applications/interest-dimensions');
+    expect(result).toEqual(dims);
+  });
+
+  it('updateApplication accepts interest_signals in the payload', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ application_id: 'x' }), { status: 200 })
+    );
+    const signals = [{ dimension: 'mission', weight: 4 }];
+    await updateApplication('x', { interest_signals: signals });
+    const { url, options } = lastCall();
+    expect(url).toContain('/applications/x');
+    expect(options.method).toBe('PATCH');
+    expect(JSON.parse(String(options.body))).toEqual({ interest_signals: signals });
+  });
+
+  it('APPLICATION_STATUS_ORDER starts with considering', () => {
+    expect(APPLICATION_STATUS_ORDER[0]).toBe('considering');
+    expect(APPLICATION_STATUS_ORDER).toContain('considering');
+    expect(APPLICATION_STATUS_ORDER).toContain('saved');
   });
 });

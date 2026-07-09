@@ -17,7 +17,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dropdown } from '@/components/ui/dropdown';
 import { useTranslations } from '@/lib/i18n';
 import { fetchResumeList, type ResumeListItem } from '@/lib/api/resume';
-import { createApplication, type ApplicationStatus } from '@/lib/api/tracker';
+import {
+  createApplication,
+  quickCaptureApplication,
+  type ApplicationStatus,
+} from '@/lib/api/tracker';
+
+type Mode = 'with_resume' | 'considering';
 
 interface ManualAddApplicationDialogProps {
   open: boolean;
@@ -31,6 +37,7 @@ export function ManualAddApplicationDialog({
   onCreated,
 }: ManualAddApplicationDialogProps) {
   const { t } = useTranslations();
+  const [mode, setMode] = useState<Mode>('with_resume');
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
   const [resumeId, setResumeId] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -54,7 +61,7 @@ export function ManualAddApplicationDialog({
   const resumeLabel = (r: ResumeListItem): string =>
     r.title || r.filename || t('tracker.manualAdd.untitledResume');
 
-  const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleJdKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') e.stopPropagation();
   };
 
@@ -63,10 +70,46 @@ export function ManualAddApplicationDialog({
     setCompany('');
     setRole('');
     setStatus('applied');
+    setMode('with_resume');
     setError(null);
   };
 
   const handleSubmit = async () => {
+    if (mode === 'considering') {
+      if (!jobDescription.trim()) {
+        setError(t('tracker.manualAdd.quickValidation'));
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      try {
+        await quickCaptureApplication({
+          jd_text: jobDescription.trim(),
+          company: company.trim() || undefined,
+          role: role.trim() || undefined,
+        });
+        reset();
+        onCreated();
+        onOpenChange(false);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        // 409 → duplicate job already tracked
+        if (
+          msg.includes('409') ||
+          msg.toLowerCase().includes('duplicate') ||
+          msg.toLowerCase().includes('already')
+        ) {
+          setError(t('tracker.manualAdd.duplicateConsidering'));
+        } else {
+          setError(t('tracker.manualAdd.failed'));
+        }
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // with_resume mode
     if (!resumeId || !jobDescription.trim()) {
       setError(t('tracker.manualAdd.validation'));
       return;
@@ -100,14 +143,49 @@ export function ManualAddApplicationDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <Label>{t('tracker.manualAdd.resume')}</Label>
-            <Dropdown
-              options={resumes.map((r) => ({ id: r.resume_id, label: resumeLabel(r) }))}
-              value={resumeId}
-              onChange={setResumeId}
-            />
+          {/* Mode toggle — Swiss bordered tabs */}
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('with_resume');
+                setError(null);
+              }}
+              className={`flex-1 border border-black px-3 py-1.5 font-mono text-xs uppercase tracking-wide transition-colors ${
+                mode === 'with_resume'
+                  ? 'bg-ink text-white'
+                  : 'bg-background text-ink hover:bg-paper-tint'
+              }`}
+            >
+              {t('tracker.manualAdd.modeWithResume')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('considering');
+                setError(null);
+              }}
+              className={`-ml-px flex-1 border border-black px-3 py-1.5 font-mono text-xs uppercase tracking-wide transition-colors ${
+                mode === 'considering'
+                  ? 'bg-ink text-white'
+                  : 'bg-background text-ink hover:bg-paper-tint'
+              }`}
+            >
+              {t('tracker.manualAdd.modeConsidering')}
+            </button>
           </div>
+
+          {/* Resume selector — only for with_resume mode */}
+          {mode === 'with_resume' && (
+            <div className="space-y-1">
+              <Label>{t('tracker.manualAdd.resume')}</Label>
+              <Dropdown
+                options={resumes.map((r) => ({ id: r.resume_id, label: resumeLabel(r) }))}
+                value={resumeId}
+                onChange={setResumeId}
+              />
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="manual-jd">{t('tracker.manualAdd.jobDescription')}</Label>
@@ -115,7 +193,7 @@ export function ManualAddApplicationDialog({
               id="manual-jd"
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
-              onKeyDown={handleNotesKeyDown}
+              onKeyDown={handleJdKeyDown}
               placeholder={t('tracker.manualAdd.jobDescriptionPlaceholder')}
               rows={5}
             />
@@ -142,17 +220,20 @@ export function ManualAddApplicationDialog({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label>{t('tracker.manualAdd.status')}</Label>
-            <Dropdown
-              options={[
-                { id: 'applied', label: t('tracker.columns.applied') },
-                { id: 'saved', label: t('tracker.columns.saved') },
-              ]}
-              value={status}
-              onChange={(value) => setStatus(value as ApplicationStatus)}
-            />
-          </div>
+          {/* Status dropdown — only for with_resume mode */}
+          {mode === 'with_resume' && (
+            <div className="space-y-1">
+              <Label>{t('tracker.manualAdd.status')}</Label>
+              <Dropdown
+                options={[
+                  { id: 'applied', label: t('tracker.columns.applied') },
+                  { id: 'saved', label: t('tracker.columns.saved') },
+                ]}
+                value={status}
+                onChange={(value) => setStatus(value as ApplicationStatus)}
+              />
+            </div>
+          )}
 
           {error && <p className="font-mono text-xs text-destructive">{error}</p>}
         </div>

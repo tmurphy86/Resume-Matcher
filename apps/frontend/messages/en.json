@@ -958,6 +958,7 @@
     "subtitle": "Track where each tailored resume stands in your pipeline.",
     "addApplication": "Add Application",
     "columns": {
+      "considering": "Considering",
       "saved": "Saved",
       "applied": "Applied",
       "no_response": "No Response",
@@ -985,8 +986,15 @@
       "notesPlaceholder": "Add notes about this application…",
       "saveNotes": "Save notes",
       "resumeUnavailable": "The applied resume is no longer available.",
+      "noResume": "No resume attached yet.",
+      "interestSignals": "Interest Signals",
       "loadFailed": "Could not load this application.",
       "editResume": "Edit resume"
+    },
+    "interest": {
+      "title": "Why I'm Interested",
+      "save": "Save signals",
+      "saved": "Signals saved"
     },
     "bulk": {
       "selected": "{count} selected",
@@ -998,6 +1006,8 @@
     "manualAdd": {
       "title": "Add Application",
       "description": "Track an application by pasting its job description.",
+      "modeWithResume": "With resume",
+      "modeConsidering": "Just considering",
       "resume": "Resume",
       "untitledResume": "Untitled resume",
       "jobDescription": "Job Description",
@@ -1008,6 +1018,8 @@
       "status": "Status",
       "submit": "Add",
       "validation": "Pick a resume and paste a job description.",
+      "quickValidation": "Job description is required.",
+      "duplicateConsidering": "Already tracking this job.",
       "failed": "Could not create the application."
     },
     "errors": {

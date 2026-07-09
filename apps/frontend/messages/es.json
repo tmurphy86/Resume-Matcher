@@ -958,6 +958,7 @@
     "subtitle": "Controla en qué punto está cada currículum adaptado de tu proceso.",
     "addApplication": "Añadir candidatura",
     "columns": {
+      "considering": "En consideración",
       "saved": "Guardado",
       "applied": "Enviado",
       "no_response": "Sin respuesta",
@@ -985,8 +986,15 @@
       "notesPlaceholder": "Añade notas sobre esta candidatura…",
       "saveNotes": "Guardar notas",
       "resumeUnavailable": "El currículum enviado ya no está disponible.",
+      "noResume": "Aún no hay currículum adjunto.",
+      "interestSignals": "Señales de interés",
       "loadFailed": "No se pudo cargar esta candidatura.",
       "editResume": "Editar currículum"
+    },
+    "interest": {
+      "title": "Por qué me interesa",
+      "save": "Guardar señales",
+      "saved": "Señales guardadas"
     },
     "bulk": {
       "selected": "{count} seleccionadas",
@@ -998,6 +1006,8 @@
     "manualAdd": {
       "title": "Añadir candidatura",
       "description": "Haz seguimiento de una candidatura pegando su descripción.",
+      "modeWithResume": "Con currículum",
+      "modeConsidering": "Solo explorando",
       "resume": "Currículum",
       "untitledResume": "Currículum sin título",
       "jobDescription": "Descripción del empleo",
@@ -1008,6 +1018,8 @@
       "status": "Estado",
       "submit": "Añadir",
       "validation": "Elige un currículum y pega una descripción del empleo.",
+      "quickValidation": "La descripción del empleo es obligatoria.",
+      "duplicateConsidering": "Ya estás haciendo seguimiento de este empleo.",
       "failed": "No se pudo crear la candidatura."
     },
     "errors": {

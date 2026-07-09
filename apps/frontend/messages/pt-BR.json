@@ -958,6 +958,7 @@
     "subtitle": "Acompanhe em que etapa está cada currículo personalizado.",
     "addApplication": "Adicionar candidatura",
     "columns": {
+      "considering": "Em consideração",
       "saved": "Salvo",
       "applied": "Enviado",
       "no_response": "Sem resposta",
@@ -985,8 +986,15 @@
       "notesPlaceholder": "Adicione notas sobre esta candidatura…",
       "saveNotes": "Salvar notas",
       "resumeUnavailable": "O currículo enviado não está mais disponível.",
+      "noResume": "Nenhum currículo anexado ainda.",
+      "interestSignals": "Sinais de interesse",
       "loadFailed": "Não foi possível carregar esta candidatura.",
       "editResume": "Editar currículo"
+    },
+    "interest": {
+      "title": "Por que me interessa",
+      "save": "Salvar sinais",
+      "saved": "Sinais salvos"
     },
     "bulk": {
       "selected": "{count} selecionada(s)",
@@ -998,6 +1006,8 @@
     "manualAdd": {
       "title": "Adicionar candidatura",
       "description": "Acompanhe uma candidatura colando a descrição da vaga.",
+      "modeWithResume": "Com currículo",
+      "modeConsidering": "Só considerando",
       "resume": "Currículo",
       "untitledResume": "Currículo sem título",
       "jobDescription": "Descrição da vaga",
@@ -1008,6 +1018,8 @@
       "status": "Status",
       "submit": "Adicionar",
       "validation": "Escolha um currículo e cole uma descrição de vaga.",
+      "quickValidation": "A descrição da vaga é obrigatória.",
+      "duplicateConsidering": "Esta vaga já está sendo acompanhada.",
       "failed": "Não foi possível criar a candidatura."
     },
     "errors": {

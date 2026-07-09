@@ -1,7 +1,8 @@
 import { apiFetch, apiPost, apiPatch, apiDelete } from './client';
 
-// The seven stable Kanban columns (keys are decoupled from i18n labels).
+// The eight stable Kanban columns (keys are decoupled from i18n labels).
 export type ApplicationStatus =
+  | 'considering'
   | 'saved'
   | 'applied'
   | 'no_response'
@@ -11,6 +12,7 @@ export type ApplicationStatus =
   | 'rejected';
 
 export const APPLICATION_STATUS_ORDER: ApplicationStatus[] = [
+  'considering',
   'saved',
   'applied',
   'no_response',
@@ -20,10 +22,21 @@ export const APPLICATION_STATUS_ORDER: ApplicationStatus[] = [
   'rejected',
 ];
 
+export interface InterestSignal {
+  dimension: string;
+  weight: number; // 1-5
+  note?: string;
+}
+
+export interface InterestDimension {
+  id: string;
+  label: string;
+}
+
 export interface Application {
   application_id: string;
   job_id: string;
-  resume_id: string;
+  resume_id: string | null; // null for considering cards (no resume attached yet)
   master_resume_id: string | null;
   status: ApplicationStatus;
   company: string | null;
@@ -31,6 +44,7 @@ export interface Application {
   applied_at: string | null;
   notes: string | null;
   position: number;
+  interest_signals: InterestSignal[];
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +70,13 @@ export interface ManualApplicationCreate {
   notes?: string;
 }
 
+export interface QuickCaptureCreate {
+  jd_text: string;
+  jd_url?: string;
+  company?: string;
+  role?: string;
+}
+
 export interface ApplicationUpdate {
   status?: ApplicationStatus;
   position?: number;
@@ -63,6 +84,7 @@ export interface ApplicationUpdate {
   company?: string;
   role?: string;
   applied_at?: string;
+  interest_signals?: InterestSignal[];
 }
 
 export interface ApplicationActionResponse {
@@ -117,13 +139,25 @@ export async function createApplication(payload: ManualApplicationCreate): Promi
   return asJson<Application>(res, 'Failed to create application');
 }
 
+// Quick-capture a "considering" card without a resume.
+export async function quickCaptureApplication(payload: QuickCaptureCreate): Promise<Application> {
+  const res = await apiPost('/applications/quick', payload);
+  return asJson<Application>(res, 'Failed to create application');
+}
+
+// Fetch the seven interest dimensions from the backend (stable list, cache on first call).
+export async function getInterestDimensions(): Promise<InterestDimension[]> {
+  const res = await apiFetch('/applications/interest-dimensions', { credentials: 'include' });
+  return asJson<InterestDimension[]>(res, 'Failed to load interest dimensions');
+}
+
 // Fetch a card with its embedded JD + applied resume (for the modal).
 export async function getApplicationDetail(id: string): Promise<ApplicationDetail> {
   const res = await apiFetch(`/applications/${id}`, { credentials: 'include' });
   return asJson<ApplicationDetail>(res, 'Failed to load application');
 }
 
-// Update one card (status/position/notes/company/role/applied_at).
+// Update one card (status/position/notes/company/role/applied_at/interest_signals).
 export async function updateApplication(
   id: string,
   payload: ApplicationUpdate

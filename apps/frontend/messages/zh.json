@@ -958,6 +958,7 @@
     "subtitle": "追踪每份定制简历在求职流程中的进展。",
     "addApplication": "添加申请",
     "columns": {
+      "considering": "考虑中",
       "saved": "已保存",
       "applied": "已投递",
       "no_response": "无回复",
@@ -985,8 +986,15 @@
       "notesPlaceholder": "为此申请添加备注……",
       "saveNotes": "保存备注",
       "resumeUnavailable": "所投递的简历已不可用。",
+      "noResume": "尚未附上简历。",
+      "interestSignals": "兴趣信号",
       "loadFailed": "无法加载此申请。",
       "editResume": "编辑简历"
+    },
+    "interest": {
+      "title": "感兴趣的原因",
+      "save": "保存信号",
+      "saved": "信号已保存"
     },
     "bulk": {
       "selected": "已选择 {count} 项",
@@ -998,6 +1006,8 @@
     "manualAdd": {
       "title": "添加申请",
       "description": "粘贴职位描述以追踪一项申请。",
+      "modeWithResume": "附简历",
+      "modeConsidering": "只是考虑",
       "resume": "简历",
       "untitledResume": "未命名简历",
       "jobDescription": "职位描述",
@@ -1008,6 +1018,8 @@
       "status": "状态",
       "submit": "添加",
       "validation": "请选择一份简历并粘贴职位描述。",
+      "quickValidation": "职位描述为必填项。",
+      "duplicateConsidering": "该职位已在追踪中。",
       "failed": "无法创建该申请。"
     },
     "errors": {

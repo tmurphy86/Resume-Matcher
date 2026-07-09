@@ -958,6 +958,7 @@
     "subtitle": "各カスタマイズ済み履歴書の選考状況を管理します。",
     "addApplication": "応募を追加",
     "columns": {
+      "considering": "検討中",
       "saved": "保存済み",
       "applied": "応募済み",
       "no_response": "返信なし",
@@ -985,8 +986,15 @@
       "notesPlaceholder": "この応募についてのメモを追加…",
       "saveNotes": "メモを保存",
       "resumeUnavailable": "応募した履歴書は利用できなくなりました。",
+      "noResume": "まだ履歴書が添付されていません。",
+      "interestSignals": "興味シグナル",
       "loadFailed": "この応募を読み込めませんでした。",
       "editResume": "履歴書を編集"
+    },
+    "interest": {
+      "title": "興味を持った理由",
+      "save": "シグナルを保存",
+      "saved": "シグナルを保存しました"
     },
     "bulk": {
       "selected": "{count} 件選択中",
@@ -998,6 +1006,8 @@
     "manualAdd": {
       "title": "応募を追加",
       "description": "求人内容を貼り付けて応募を追跡します。",
+      "modeWithResume": "履歴書あり",
+      "modeConsidering": "検討中として追加",
       "resume": "履歴書",
       "untitledResume": "無題の履歴書",
       "jobDescription": "求人内容",
@@ -1008,6 +1018,8 @@
       "status": "ステータス",
       "submit": "追加",
       "validation": "履歴書を選び、求人内容を貼り付けてください。",
+      "quickValidation": "求人内容は必須です。",
+      "duplicateConsidering": "この求人はすでに追跡中です。",
       "failed": "応募を作成できませんでした。"
     },
     "errors": {

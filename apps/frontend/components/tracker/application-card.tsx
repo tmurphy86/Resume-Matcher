@@ -77,6 +77,24 @@ export function ApplicationCard({
                 {t('tracker.card.sharedResume')}
               </span>
             )}
+            {application.interest_signals && application.interest_signals.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {application.interest_signals.slice(0, 3).map((sig) => (
+                  <span
+                    key={sig.dimension}
+                    className="inline-flex items-center gap-0.5 border border-black bg-paper-tint px-1 font-mono text-[9px] uppercase tracking-wide text-ink-soft"
+                  >
+                    {sig.dimension.replace('_', ' ')}
+                    <span className="text-primary">{'●'.repeat(sig.weight)}</span>
+                  </span>
+                ))}
+                {application.interest_signals.length > 3 && (
+                  <span className="font-mono text-[9px] text-steel-grey">
+                    +{application.interest_signals.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
           </button>
 
           <button
