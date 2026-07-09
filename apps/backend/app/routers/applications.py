@@ -1,6 +1,8 @@
 """Kanban application-tracker endpoints."""
 
+import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -16,12 +18,38 @@ from app.schemas import (
     ApplicationUpdate,
     BulkDelete,
     BulkStatusUpdate,
+    InterestDimension,
     ManualApplicationCreate,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/applications", tags=["Application Tracker"])
+
+# Cache for interest dimensions loaded from JSON
+_interest_dimensions_cache: list[dict[str, str]] | None = None
+
+
+def _load_interest_dimensions() -> list[dict[str, str]]:
+    """Load interest dimensions from the JSON resource file."""
+    global _interest_dimensions_cache
+    if _interest_dimensions_cache is not None:
+        return _interest_dimensions_cache
+
+    dimensions_path = Path(__file__).parent.parent / "resources" / "interest_dimensions.json"
+    try:
+        with open(dimensions_path, "r") as f:
+            _interest_dimensions_cache = json.load(f)
+        return _interest_dimensions_cache
+    except Exception as e:
+        logger.error("Failed to load interest dimensions: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to load interest dimensions.")
+
+
+def _get_valid_dimensions() -> set[str]:
+    """Get the set of valid dimension IDs."""
+    dimensions = _load_interest_dimensions()
+    return {d["id"] for d in dimensions}
 
 
 def _group_by_status(applications: list[dict[str, Any]]) -> dict[str, list[ApplicationResponse]]:
@@ -39,6 +67,13 @@ def _group_by_status(applications: list[dict[str, Any]]) -> dict[str, list[Appli
             continue
         columns[status].append(ApplicationResponse(**app))
     return columns
+
+
+@router.get("/interest-dimensions", response_model=list[InterestDimension])
+async def get_interest_dimensions() -> list[InterestDimension]:
+    """Get all interest dimensions for the frontend."""
+    dimensions = _load_interest_dimensions()
+    return [InterestDimension(**d) for d in dimensions]
 
 
 @router.get("", response_model=ApplicationListResponse)
@@ -134,11 +169,22 @@ async def bulk_update_applications(request: BulkStatusUpdate) -> ApplicationActi
 
 @router.patch("/{application_id}", response_model=ApplicationResponse)
 async def update_application(application_id: str, request: ApplicationUpdate) -> ApplicationResponse:
-    """Update a card (status/position/notes/company/role/applied_at)."""
+    """Update a card (status/position/notes/company/role/applied_at/interest_signals)."""
     updates = request.model_dump(exclude_unset=True)
     # Normalize the enum to its stable string value for the data layer.
     if "status" in updates and updates["status"] is not None:
         updates["status"] = request.status.value
+
+    # Validate interest signals dimensions if provided.
+    if "interest_signals" in updates and updates["interest_signals"] is not None:
+        valid_dimensions = _get_valid_dimensions()
+        for signal in updates["interest_signals"]:
+            if signal["dimension"] not in valid_dimensions:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Unknown interest dimension: {signal['dimension']}",
+                )
+
     try:
         updated = await db.update_application(application_id, updates)
     except Exception as e:

@@ -172,6 +172,7 @@ class Database:
             "role": row.role,
             "applied_at": row.applied_at,
             "notes": row.notes,
+            "interest_signals": row.interest_signals or [],
             "position": row.position,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
@@ -515,6 +516,7 @@ class Database:
         role: str | None = None,
         applied_at: str | None = None,
         notes: str | None = None,
+        interest_signals: list | None = None,
     ) -> dict[str, Any]:
         """Create a tracker card, deduped on (job_id, resume_id).
 
@@ -545,6 +547,7 @@ class Database:
                 role=role,
                 applied_at=applied_at,
                 notes=notes,
+                interest_signals=interest_signals or [],
                 position=position,
                 created_at=now,
                 updated_at=now,
@@ -607,7 +610,7 @@ class Database:
             new_status = updates.get("status", old_status)
             target_position = updates.get("position", None)
 
-            for key in ("company", "role", "applied_at", "notes"):
+            for key in ("company", "role", "applied_at", "notes", "interest_signals"):
                 if key in updates:
                     setattr(row, key, updates[key])
 

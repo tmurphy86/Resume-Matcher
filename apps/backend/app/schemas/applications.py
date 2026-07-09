@@ -6,6 +6,21 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class InterestSignal(BaseModel):
+    """A weighted interest signal for an application."""
+
+    dimension: str
+    weight: int = Field(ge=1, le=5)
+    note: str | None = None
+
+
+class InterestDimension(BaseModel):
+    """A dimension ID and its label."""
+
+    id: str
+    label: str
+
+
 class ApplicationStatus(str, Enum):
     """The seven stable tracker columns (decoupled from i18n labels)."""
 
@@ -34,6 +49,7 @@ class ApplicationResponse(BaseModel):
     role: str | None = None
     applied_at: str | None = None
     notes: str | None = None
+    interest_signals: list[InterestSignal] = []
     position: int
     created_at: str
     updated_at: str
@@ -81,6 +97,7 @@ class ApplicationUpdate(BaseModel):
     company: str | None = None
     role: str | None = None
     applied_at: str | None = None
+    interest_signals: list[InterestSignal] | None = None
 
 
 class BulkStatusUpdate(BaseModel):

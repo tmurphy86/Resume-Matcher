@@ -69,6 +69,8 @@ from app.schemas.applications import (
     APPLICATION_STATUS_ORDER,
     BulkDelete,
     BulkStatusUpdate,
+    InterestDimension,
+    InterestSignal,
     ManualApplicationCreate,
 )
 
@@ -140,4 +142,6 @@ __all__ = [
     "BulkStatusUpdate",
     "BulkDelete",
     "ApplicationActionResponse",
+    "InterestSignal",
+    "InterestDimension",
 ]

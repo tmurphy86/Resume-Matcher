@@ -1,0 +1,9 @@
+[
+  {"id": "compensation", "label": "Compensation & Benefits"},
+  {"id": "role_scope", "label": "Role Scope & Autonomy"},
+  {"id": "values_mission", "label": "Values & Mission Alignment"},
+  {"id": "growth", "label": "Growth & Learning"},
+  {"id": "technology", "label": "Technology & Tools"},
+  {"id": "stability_lifestyle", "label": "Stability & Lifestyle Fit"},
+  {"id": "people", "label": "Team & Leadership"}
+]
