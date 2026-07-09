@@ -1,0 +1,164 @@
+@import './_tokens.css';
+
+/*
+  Murphy Template
+  ID: murphy
+
+  Dense professional layout: full-width solid black header bar with the candidate name
+  in large letter-spaced ALL CAPS white text and a monospace contact line in light gray;
+  a gray-background competency band immediately below; compact small-caps section headers
+  with a 1px black rule; tight experience entries with bold company on the left and
+  mono dates on the right; no color except black and gray.
+
+  References tim-resume-original.pdf.
+*/
+
+.container {
+  width: 100%;
+}
+
+/* ─── Full-bleed black header bar ─────────────────────────────────────────── */
+
+/*
+  Negative margins pull the header out of the resume-body padding so it bleeds edge-to-edge
+  in the live preview. Padding is added back inside to align text with the content column.
+  In print mode the margin CSS vars are 0mm (Playwright owns the physical margins), so the
+  calcs collapse to 0 and the header fills the printable area.
+*/
+.header {
+  background-color: #000000;
+  margin-left: calc(-1 * var(--margin-left));
+  margin-right: calc(-1 * var(--margin-right));
+  margin-top: calc(-1 * var(--margin-top));
+  padding-top: calc(var(--margin-top) + 0.65rem);
+  padding-bottom: 0.65rem;
+  padding-left: var(--margin-left);
+  padding-right: var(--margin-right);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.name {
+  font-family: var(--body-font);
+  font-size: calc(var(--font-size-base) * var(--header-scale));
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+/* Mono contact line in the header — light gray, smaller than name */
+.contactLine {
+  font-family: var(--resume-font-mono);
+  font-size: calc(var(--font-size-base) * 0.78);
+  color: #cccccc;
+  margin-top: 0.35rem;
+  letter-spacing: 0.01em;
+}
+
+.contactSep {
+  color: #777777;
+  padding: 0 0.45em;
+}
+
+/* ─── Gray competency band ────────────────────────────────────────────────── */
+
+/*
+  Renders the technicalSkills array from `additional` as pipe-separated competency
+  labels in a gray band. Skills also appear in this band only; the additional section
+  below skips them to avoid duplication.
+*/
+.competencyBand {
+  background-color: #e8e8e8;
+  margin-left: calc(-1 * var(--margin-left));
+  margin-right: calc(-1 * var(--margin-right));
+  padding: 0.35rem var(--margin-right) 0.35rem var(--margin-left);
+  font-family: var(--body-font);
+  font-size: calc(var(--font-size-base) * 0.84);
+  font-weight: 500;
+  color: #000000;
+  margin-bottom: var(--section-gap);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.competencySep {
+  color: #555555;
+  padding: 0 0.55em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ─── Section headers ─────────────────────────────────────────────────────── */
+
+/*
+  Small-caps label + 1px black bottom rule. Using font-variant: small-caps on
+  mixed-case display names (e.g. "Experience") produces the expected look.
+*/
+.sectionTitle {
+  font-family: var(--body-font);
+  font-size: calc(var(--font-size-base) * var(--section-header-scale));
+  font-weight: 700;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: #000000;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 0.1rem;
+  margin-bottom: var(--item-gap);
+  break-after: avoid;
+  page-break-after: avoid;
+  orphans: 3;
+  widows: 3;
+}
+
+/* ─── Experience / project entries ───────────────────────────────────────── */
+
+.entryCompany {
+  font-weight: 700;
+  color: var(--resume-text-primary);
+}
+
+.entryRole {
+  font-style: italic;
+  color: var(--resume-text-body);
+}
+
+.entryDates {
+  font-family: var(--resume-font-mono);
+  font-size: calc(var(--font-size-base) * 0.78);
+  color: var(--resume-text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* ─── Skills / additional section (non-competency items) ─────────────────── */
+
+.skillLabel {
+  font-weight: 700;
+  color: var(--resume-text-primary);
+  min-width: 8rem;
+  flex-shrink: 0;
+}
+
+/* ─── Print overrides ─────────────────────────────────────────────────────── */
+
+@media print {
+  .header {
+    background-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .competencyBand {
+    background-color: #e8e8e8 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .sectionTitle {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+}

@@ -7,6 +7,7 @@ import {
   ResumeLatex,
   ResumeClean,
   ResumeVivid,
+  ResumeMurphy,
 } from '@/components/resume';
 import {
   type TemplateSettings,
@@ -228,6 +229,13 @@ const Resume: React.FC<ResumeProps> = ({
           showContactIcons={mergedSettings.showContactIcons}
           sectionHeadings={sectionHeadings}
           fallbackLabels={fallbackLabels}
+        />
+      )}
+      {mergedSettings.template === 'murphy' && (
+        <ResumeMurphy
+          data={resumeData}
+          showContactIcons={mergedSettings.showContactIcons}
+          additionalSectionLabels={additionalSectionLabels}
         />
       )}
     </div>

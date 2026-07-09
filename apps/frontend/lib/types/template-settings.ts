@@ -12,7 +12,8 @@ export type TemplateType =
   | 'modern-two-column'
   | 'latex'
   | 'clean'
-  | 'vivid';
+  | 'vivid'
+  | 'murphy';
 
 export type PageSize = 'A4' | 'LETTER';
 
@@ -246,6 +247,11 @@ export const TEMPLATE_OPTIONS: TemplateInfo[] = [
     id: 'vivid',
     name: 'Vivid',
     description: 'Colorful two-column layout with accent headers and arrow bullets',
+  },
+  {
+    id: 'murphy',
+    name: 'Murphy',
+    description: 'Black header bar, gray competency band, compact small-caps sections',
   },
 ];
 
