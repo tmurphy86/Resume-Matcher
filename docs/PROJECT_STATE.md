@@ -23,13 +23,18 @@ Recommended dispatch order: wave 1 = RH-201, RH-203, RH-207, RH-209 (independent
 - **RH-107** `feat(tracker): RH-107 considering column + interest quick-tags` (3fa1e83) — frontend: considering column, interest signal chips + panel, quick-capture mode in add dialog; all 6 locales updated (also fixed fr.json parity gap); 4 new API tests. ✅
 
 ## In flight
-_(none — wave 2 complete)_
+_(none — wave 3 complete, P2 complete)_
 
 ## Blockers
 _(none)_
 
 ## DECISION NEEDED
 _(none)_
+
+## Shipped (P2 wave 3 — 2026-07-10)
+- **RH-205** `feat(rh205): provenance badges and unverified-change warnings in tailor view` (81bcd20) — `ProvenancePanel` component (covered/uncovered/broken status bar, verify-gaps link, unverified count); `Data` interface extended with `provenance`/`unverified`; DiffPreviewModal marks unverified changes with amber badge; tailor page renders panel post-improve; `tailor.provenance` i18n in all 6 locales; 8 new vitest tests. ✅
+- **RH-206** `feat(tailor): RH-206 clickable ATS gaps → interview mode panel` (4930f60) — missing keyword chips become clickable buttons; ProvenancePanel gains `selectedKeyword` highlight bar; tailor page wires chip→panel selection; `selectedGap`/`clearGap` i18n keys in all 6 locales; 10 new vitest tests. ✅
+- **RH-210** `feat(facts): RH-210 old-resume dedup import with variant-of grouping` (2616065) — `import_resume_facts()` with new/duplicate/variant_of grouping (threshold 0.5/0.9); `POST /facts/import-resume`; "Import old resume" modal in facts page with colour-coded groups; `facts.importModal` i18n keys; 5 new backend service tests; 630 backend / 220 frontend passing. ✅
 
 ## Shipped (P2 wave 2 — 2026-07-09)
 - **RH-202** `feat(interview-mode): RH-202 gap questions + answer-to-fact loop` — `GAP_QUESTIONS_PROMPT`; `services/interview_mode.py` (`get_gap_questions`, `answer_gap_question`); `POST /facts/gap-questions` + `POST /facts/answer`; `AnswerGapRequest` schema; refiner Pass 1 augmented with fact keywords; `conftest.py` `isolated_db` extended; 22 new tests (18 service + 4 integration); 625 backend passing. ✅
@@ -50,3 +55,4 @@ _(none)_
 - 2026-07-09 — Eng lead (P2 wave 1): dispatched RH-201/203/207/209 in parallel (RH-209 committed directly; RH-203/207/201 cherry-picked from worktrees). Suite: 585 backend (+18 new), 201 frontend (+7 new). **P2 wave 1 complete.** RH-208 decision awaiting program lead approval (see DECISION NEEDED above). Wave 2 ready to dispatch: RH-202, RH-204; RH-208 pending decision.
 - 2026-07-09 — Program lead: RH-208 **Option A (python-docx) APPROVED** → ADR-004, with scope clarification (ATS-safe structure over pixel fidelity; Murphy PDF remains the pixel-faithful artifact). BACKLOG RH-208 updated accordingly. Wave 2 (RH-202, RH-204, RH-208) cleared for dispatch.
 - 2026-07-09 — Eng lead (P2 wave 2): manual integration of RH-202/204/208 from worktrees (pre-P1 base → copy new files + surgical patch). RH-202 adds interview mode (gap Q&A → fact persistence); RH-204 adds facts library page; RH-208 adds docx export. Suite: 625 backend (+40 new), 201 frontend. **P2 wave 2 complete.** Wave 3 ready: RH-205, RH-206, RH-210.
+- 2026-07-10 — Eng lead (P2 wave 3): dispatched RH-205/RH-210 in parallel (worktrees), then RH-206 after RH-205 landed. Manual merge needed for locale files (stash+cherry-pick collision). Suite: 630 backend, 230 frontend (+29 new). **P2 wave 3 complete. P2 complete.**
