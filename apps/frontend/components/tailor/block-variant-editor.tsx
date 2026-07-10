@@ -107,7 +107,7 @@ function SectionRow({ section }: { section: BlockSection }) {
           const isSwitchingBlock = switching !== null && switching.startsWith(`${block.id}-`);
 
           return (
-            <div key={block.id} className="border border-black p-2 bg-[#FAFAF8]">
+            <div key={block.id} className="border border-black p-2 bg-paper-tint">
               {/* Active text preview */}
               <p className="font-mono text-xs text-ink mb-2 line-clamp-2">
                 {activeVariant?.text ?? '—'}
