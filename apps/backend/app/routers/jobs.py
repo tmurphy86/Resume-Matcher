@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.database import db
 from app.schemas import JobUploadRequest, JobUploadResponse
@@ -15,7 +15,9 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
 @router.post("/upload", response_model=JobUploadResponse)
-async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadResponse:
+async def upload_job_descriptions(
+    request: JobUploadRequest, background_tasks: BackgroundTasks
+) -> JobUploadResponse:
     """Upload one or more job descriptions.
 
     Stores the raw text for later use in resume tailoring.
@@ -37,9 +39,10 @@ async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadRespons
         )
         job_ids.append(job["job_id"])
 
-        # Best-effort parse — errors are logged inside parse_job_description,
-        # never raised here so the upload always succeeds.
-        await parse_job_description(job["job_id"], jd.strip())
+        # Best-effort parse — deferred to a background task so N JD uploads are
+        # not serialised into N sequential LLM round-trips before responding.
+        # Errors are logged inside parse_job_description; the upload always succeeds.
+        background_tasks.add_task(parse_job_description, job["job_id"], jd.strip())
 
     return JobUploadResponse(
         message="data successfully processed",

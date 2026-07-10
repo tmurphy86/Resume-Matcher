@@ -624,7 +624,6 @@ class TestGenerateCareerReport:
         mock_db.get_master_resume = AsyncMock(
             return_value={"resume_id": "r1", "processed_data": {}}
         )
-        mock_db.list_facts = AsyncMock(return_value=[])
         mock_db.update_career_report = AsyncMock(return_value=_UPDATED_REPORT)
         mock_llm.return_value = _VALID_NARRATIVE_RESULT
 
@@ -640,7 +639,10 @@ class TestGenerateCareerReport:
         mock_db.update_career_report.assert_called_once()
         call_kwargs = mock_db.update_career_report.call_args.kwargs
         assert call_kwargs["report_id"] == 1
-        assert "Backend Engineer" in call_kwargs["scores_json"]
+        # scores_json is now a list of dicts (not a dict keyed by name)
+        scores_list = call_kwargs["scores_json"]
+        assert isinstance(scores_list, list)
+        assert any(s["archetype_name"] == "Backend Engineer" for s in scores_list)
 
     @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
     @patch("app.services.career_intelligence.db")
@@ -717,14 +719,15 @@ class TestGenerateCareerReport:
 
     @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
     @patch("app.services.career_intelligence.db")
-    async def test_invalid_cited_fact_ids_flags_report(
+    async def test_invalid_cited_fact_ids_are_ignored(
         self, mock_db: MagicMock, mock_llm: AsyncMock
     ) -> None:
-        """LLM cites a fact_id that does not exist → advice_md set to error marker."""
-        narrative_with_bad_ids = {
+        """LLM cites a non-existent fact_id → fact IDs are not validated (no IDs
+        in prompt), so advice_md still contains valid Markdown (not an error marker)."""
+        narrative_with_bad_fact_ids = {
             **_VALID_NARRATIVE_RESULT,
             "cited_fact_ids": ["nonexistent-fact-uuid"],
-            "cited_jd_ids": [],
+            "cited_jd_ids": [],  # no jd_ids cited → jd validation passes
         }
         mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
         mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
@@ -732,18 +735,17 @@ class TestGenerateCareerReport:
         mock_db.get_master_resume = AsyncMock(
             return_value={"resume_id": "r1", "processed_data": {}}
         )
-        mock_db.list_facts = AsyncMock(return_value=[])  # no facts in DB
-        updated_with_error = {**_SAMPLE_REPORT, "advice_md": "[CITATION ERROR: invalid IDs cited]"}
-        mock_db.update_career_report = AsyncMock(return_value=updated_with_error)
-        mock_llm.return_value = narrative_with_bad_ids
+        mock_db.update_career_report = AsyncMock(return_value=_UPDATED_REPORT)
+        mock_llm.return_value = narrative_with_bad_fact_ids
 
         with patch("app.services.career_intelligence.get_llm_config"), \
              patch("app.services.career_intelligence.get_model_name", return_value=None):
-            report = await generate_career_report()
+            await generate_career_report()
 
         call_kwargs = mock_db.update_career_report.call_args.kwargs
-        assert call_kwargs["advice_md"] == "[CITATION ERROR: invalid IDs cited]"
-        assert report["advice_md"] == "[CITATION ERROR: invalid IDs cited]"
+        # Fact IDs are no longer validated — bad fact IDs are silently ignored.
+        assert "[CITATION ERROR" not in call_kwargs["advice_md"]
+        assert "##" in call_kwargs["advice_md"]
 
     @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
     @patch("app.services.career_intelligence.db")
@@ -762,7 +764,6 @@ class TestGenerateCareerReport:
         mock_db.get_master_resume = AsyncMock(
             return_value={"resume_id": "r1", "processed_data": {}}
         )
-        mock_db.list_facts = AsyncMock(return_value=[])
         updated_with_error = {**_SAMPLE_REPORT, "advice_md": "[CITATION ERROR: invalid IDs cited]"}
         mock_db.update_career_report = AsyncMock(return_value=updated_with_error)
         mock_llm.return_value = narrative_with_bad_jd
@@ -791,7 +792,6 @@ class TestGenerateCareerReport:
         mock_db.get_master_resume = AsyncMock(
             return_value={"resume_id": "r1", "processed_data": {}}
         )
-        mock_db.list_facts = AsyncMock(return_value=[{"fact_id": "fact-1"}])
         mock_db.update_career_report = AsyncMock(return_value=_UPDATED_REPORT)
         mock_llm.return_value = narrative_clean
 

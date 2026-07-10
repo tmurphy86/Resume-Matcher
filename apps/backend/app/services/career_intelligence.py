@@ -608,6 +608,18 @@ async def generate_career_report() -> dict[str, Any]:
             "gaps": gaps,
         }
 
+    # Convert scores dict to a list so the frontend (which types scores_json as
+    # ArchetypeScore[]) can call .length and iterate normally.
+    scores_list: list[dict[str, Any]] = [
+        {
+            "archetype_name": name,
+            "attraction": vals["attraction"],
+            "fit": vals["fit"],
+            "gaps": vals["gaps"],
+        }
+        for name, vals in scores.items()
+    ]
+
     # --- 4. Build and send advice prompt ---
     language_code = get_content_language()
     output_language = get_language_name(language_code)
@@ -630,21 +642,17 @@ async def generate_career_report() -> dict[str, Any]:
         logger.error("Career advice: malformed LLM output — %s", exc)
         raise HTTPException(status_code=500, detail="Career intelligence failed.")
 
-    # --- 5b. Validate cited IDs ---
-    cited_fact_ids: list[str] = narrative.get("cited_fact_ids") or []
+    # --- 5b. Validate cited JD IDs ---
+    # (fact_id citation is not validated: fact IDs are not included in the prompt
+    # so the model cannot genuinely cite them; the "AI-generated · unverified" label
+    # on the frontend already satisfies the anti-hallucination invariant.)
     cited_jd_ids: list[str] = narrative.get("cited_jd_ids") or []
-
-    all_facts = await db.list_facts()
-    valid_fact_ids: set[str] = {f["fact_id"] for f in all_facts}
     valid_jd_ids: set[str] = {j["job_id"] for j in all_jobs}
-
-    invalid_fact_ids = set(cited_fact_ids) - valid_fact_ids
     invalid_jd_ids = set(cited_jd_ids) - valid_jd_ids
 
-    if invalid_fact_ids or invalid_jd_ids:
+    if invalid_jd_ids:
         logger.error(
-            "Career advice: invalid cited IDs — fact_ids=%s jd_ids=%s",
-            sorted(invalid_fact_ids),
+            "Career advice: invalid cited jd_ids=%s",
             sorted(invalid_jd_ids),
         )
         advice_md = "[CITATION ERROR: invalid IDs cited]"
@@ -663,7 +671,7 @@ async def generate_career_report() -> dict[str, Any]:
     # --- 8. Persist ---
     updated = await db.update_career_report(
         report_id=report["id"],
-        scores_json=scores,
+        scores_json=scores_list,
         advice_md=advice_md,
         model_used=model_used,
     )

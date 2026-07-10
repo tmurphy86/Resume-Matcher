@@ -596,8 +596,8 @@ Required output schema:
 
 Rules:
 - Every archetype must appear in exactly one of: target, stretch (by name), or deprioritize.
-- An archetype is "target" when attraction >= 3.0 AND fit >= 0.5.
-- An archetype is "stretch" when attraction >= 3.0 AND fit < 0.5.
+- An archetype is "target" when attraction >= 2.5 AND fit >= 0.5.
+- An archetype is "stretch" when attraction >= 2.5 AND fit < 0.5.
 - Otherwise it is "deprioritize".
 - "gap_closing_plan" must reference the actual gaps listed for that archetype.
 - "market_observations" must be grounded in the provided data — do NOT speculate beyond it.
