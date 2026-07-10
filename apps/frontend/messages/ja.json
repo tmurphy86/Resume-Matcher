@@ -598,7 +598,9 @@
       "unverifiedWarning": "{count} 件の変更が事実に裏付けられていません",
       "noProvenance": "出所データなし",
       "uncoveredItems": "未カバーのブロック",
-      "brokenItems": "壊れた引用"
+      "brokenItems": "壊れた引用",
+      "selectedGap": "選択されたギャップ: {keyword}",
+      "clearGap": "クリア"
     }
   },
   "settings": {

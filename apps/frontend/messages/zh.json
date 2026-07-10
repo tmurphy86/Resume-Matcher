@@ -598,7 +598,9 @@
       "unverifiedWarning": "{count} 条更改缺乏事实支持",
       "noProvenance": "无来源数据",
       "uncoveredItems": "未覆盖块",
-      "brokenItems": "引用错误"
+      "brokenItems": "引用错误",
+      "selectedGap": "选中的差距: {keyword}",
+      "clearGap": "清除"
     }
   },
   "settings": {

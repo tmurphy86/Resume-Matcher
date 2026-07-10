@@ -598,7 +598,9 @@
       "unverifiedWarning": "{count} cambios sin respaldo de hechos",
       "noProvenance": "Sin datos de procedencia",
       "uncoveredItems": "Bloques no cubiertos",
-      "brokenItems": "Citas incorrectas"
+      "brokenItems": "Citas incorrectas",
+      "selectedGap": "Brecha seleccionada: {keyword}",
+      "clearGap": "Limpiar"
     }
   },
   "settings": {

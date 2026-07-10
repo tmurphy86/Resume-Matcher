@@ -45,6 +45,9 @@ export default function TailorPage() {
   const [missingDiffResult, setMissingDiffResult] = useState<ImprovedResult | null>(null);
   const [missingDiffError, setMissingDiffError] = useState<string | null>(null);
 
+  // Selected gap keyword for provenance panel
+  const [selectedGapKeyword, setSelectedGapKeyword] = useState<string | null>(null);
+
   // Elapsed timer for long operations
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -461,7 +464,10 @@ export default function TailorPage() {
       {/* ATS Score Breakdown — shown once a preview result is available */}
       {pendingResult?.data?.ats_score && (
         <div className="w-full max-w-4xl mt-6">
-          <ATSScoreCard atsScore={pendingResult.data.ats_score} />
+          <ATSScoreCard
+            atsScore={pendingResult.data.ats_score}
+            onKeywordClick={(keyword) => setSelectedGapKeyword(keyword)}
+          />
         </div>
       )}
 
@@ -472,6 +478,8 @@ export default function TailorPage() {
             provenance={pendingResult.data.provenance}
             unverifiedCount={pendingResult.data.unverified?.length ?? 0}
             jobId={pendingResult.data.job_id}
+            selectedKeyword={selectedGapKeyword}
+            onClearKeyword={() => setSelectedGapKeyword(null)}
           />
         </div>
       )}

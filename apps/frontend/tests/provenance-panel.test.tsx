@@ -106,4 +106,24 @@ describe('ProvenancePanel', () => {
     fireEvent.click(toggle);
     expect(screen.queryByText('Python expert')).not.toBeInTheDocument();
   });
+
+  it('renders selectedKeyword highlight bar when selectedKeyword prop is provided', () => {
+    render(
+      <ProvenancePanel
+        provenance={baseProvenance}
+        unverifiedCount={0}
+        selectedKeyword="Python"
+        onClearKeyword={() => {}}
+      />
+    );
+    expect(screen.getByText(/tailor\.provenance\.selectedGap/)).toBeInTheDocument();
+  });
+
+  it('does not render highlight bar when selectedKeyword prop is absent', () => {
+    const { container } = render(
+      <ProvenancePanel provenance={baseProvenance} unverifiedCount={0} />
+    );
+    const highlightBar = container.querySelector('.border-primary');
+    expect(highlightBar).not.toBeInTheDocument();
+  });
 });

@@ -10,9 +10,16 @@ interface ProvenancePanelProps {
   provenance: ProvenanceData | null | undefined;
   unverifiedCount: number;
   jobId?: string | null;
+  selectedKeyword?: string | null;
+  onClearKeyword?: () => void;
 }
 
-export function ProvenancePanel({ provenance, unverifiedCount }: ProvenancePanelProps) {
+export function ProvenancePanel({
+  provenance,
+  unverifiedCount,
+  selectedKeyword,
+  onClearKeyword,
+}: ProvenancePanelProps) {
   const { t } = useTranslations();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -26,6 +33,21 @@ export function ProvenancePanel({ provenance, unverifiedCount }: ProvenancePanel
 
   return (
     <div className="border border-black shadow-sw-sm bg-white">
+      {/* Selected gap highlight bar */}
+      {selectedKeyword && (
+        <div className="flex items-center justify-between gap-3 p-3 border-b border-primary bg-[#EFF6FF]">
+          <span className="font-mono text-xs text-ink font-bold">
+            {t('tailor.provenance.selectedGap', { keyword: selectedKeyword })}
+          </span>
+          <button
+            onClick={onClearKeyword}
+            className="font-mono text-xs text-primary hover:text-primary/80 transition-colors font-bold"
+            aria-label={t('tailor.provenance.clearGap')}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {/* Status bar */}
       <div className="flex items-center gap-4 p-3 border-b border-black">
         <h3 className="font-serif text-sm font-bold uppercase tracking-tight mr-auto">

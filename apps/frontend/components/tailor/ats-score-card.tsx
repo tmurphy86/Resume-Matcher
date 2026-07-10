@@ -4,6 +4,7 @@ import type { ATSScore } from '@/components/common/resume_previewer_context';
 
 interface ATSScoreCardProps {
   atsScore: ATSScore;
+  onKeywordClick?: (keyword: string) => void;
 }
 
 const SUB_SCORE_LABELS: Record<string, string> = {
@@ -47,7 +48,7 @@ function SubScoreRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function ATSScoreCard({ atsScore }: ATSScoreCardProps) {
+export function ATSScoreCard({ atsScore, onKeywordClick }: ATSScoreCardProps) {
   const { overall_score, sub_scores, missing_keywords, injectable_keywords, recommendations } =
     atsScore;
 
@@ -87,12 +88,15 @@ export function ATSScoreCard({ atsScore }: ATSScoreCardProps) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {missing_keywords.map((kw, i) => (
-              <span
+              <button
                 key={`missing-${i}-${kw}`}
-                className="text-xs bg-red-900/40 border border-red-700/50 text-red-300 rounded px-2 py-0.5"
+                onClick={() => onKeywordClick?.(kw)}
+                className={`text-xs bg-red-900/40 border border-red-700/50 text-red-300 rounded px-2 py-0.5 ${
+                  onKeywordClick ? 'cursor-pointer hover:bg-red-900/60 transition-colors' : ''
+                }`}
               >
                 {kw}
-              </span>
+              </button>
             ))}
           </div>
         </div>

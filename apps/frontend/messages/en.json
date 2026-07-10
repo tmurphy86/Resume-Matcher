@@ -598,7 +598,9 @@
       "unverifiedWarning": "{count} changes without fact support",
       "noProvenance": "No provenance data",
       "uncoveredItems": "Uncovered blocks",
-      "brokenItems": "Broken citations"
+      "brokenItems": "Broken citations",
+      "selectedGap": "Selected gap: {keyword}",
+      "clearGap": "Clear"
     }
   },
   "settings": {
