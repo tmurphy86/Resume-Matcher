@@ -209,5 +209,91 @@
 - [ ] Tests cover all three groupings
 **Test:** `cd apps/backend && uv run pytest tests/service/test_fact_extractor.py`
 
+## P3 — Career intelligence (+ mandatory P2 carryovers)
+> Context: [reviews/P2-review.md](reviews/P2-review.md) (findings F1/F2 → RH-301/302), [ADR-005](decisions/005-career-intelligence-architecture.md) (deterministic numbers, LLM narrative). RH-301/302 ship first — they are unmet P2 acceptance criteria, not new features.
+
+### RH-301: Variant editor (P2 carryover — RH-205 criterion 1)
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** — **Finding:** P2-F1
+**Goal:** Humans can see, switch, tag, and author block variants.
+**Files:** `apps/frontend/components/tailor/` and/or `components/builder/` (block variant UI), `apps/frontend/lib/api/resume.ts`, locales, tests
+**Acceptance criteria:**
+- [ ] Each block with variants shows them (tag chips visible); switching `active_variant_id` persists and updates preview without full re-render
+- [ ] "Save as variant" on any edited/accepted diff text (with tag selection) writes a new `BlockVariant` carrying the diff's fact_ids
+- [ ] Blocks-less legacy sections degrade gracefully (no variant UI shown)
+- [ ] All 6 locales; lint + vitest pass
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+**Out of scope:** variant analytics, bulk operations
+
+### RH-302: Import persists variant_of phrasings (P2 carryover — RH-210 criterion 3)
+**Size:** S **Assign:** coder (haiku) **Depends:** — **Finding:** P2-F2
+**Goal:** Confirming a `variant_of` candidate writes its phrasing onto the matched fact's master-resume blocks.
+**Files:** `apps/backend/app/services/fact_extractor.py`, `apps/backend/app/routers/facts.py`, facts page import modal confirm handler, tests
+**Acceptance criteria:**
+- [ ] New endpoint (or extended confirm) accepts `{candidate, existing_fact_id, accept_as_variant: true}` → appends `BlockVariant(text=candidate.statement, fact_ids=[existing_fact_id])` to the master-resume block(s) citing that fact; creates a block if none cites it
+- [ ] Import modal confirm actually calls it for checked variant_of rows
+- [ ] Tests: variant appended, block created when absent, dedup (same text not appended twice)
+**Test:** `cd apps/backend && uv run pytest tests/service/test_fact_extractor.py`
+
+### RH-303: Structured JD parsing
+**Size:** S **Assign:** coder (haiku) **Depends:** — **ADR:** 005
+**Goal:** Every job stores `parsed {responsibilities[], requirements[], level?, comp?}` for the intelligence layer.
+**Files:** `apps/backend/app/prompts/` (new template), `apps/backend/app/services/jd_parser.py` (new), `apps/backend/app/routers/jobs.py` (parse on upload + backfill endpoint), tests (canned LLM)
+**Acceptance criteria:**
+- [ ] JD upload triggers parse; result stored in `jobs.metadata_json["parsed"]` (facade dynamic-key pattern per ADR-005)
+- [ ] `POST /api/jobs/backfill-parse` parses existing jobs missing `parsed`
+- [ ] Malformed LLM output → logged, job saved without `parsed` (never blocks upload)
+**Test:** `cd apps/backend && uv run pytest tests/service/test_jd_parser.py`
+
+### RH-304: Archetype clustering + career_reports storage
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-303 **ADR:** 005
+**Goal:** Cluster responsibilities across all parsed JDs into named role archetypes; persist reports skeleton.
+**Files:** `apps/backend/app/models.py` (`CareerReport` per ADR-005), `apps/backend/app/database.py` (facade), `apps/backend/app/prompts/` (clustering template), `apps/backend/app/services/career_intelligence.py` (new), `apps/backend/app/routers/career.py` (new), `apps/backend/app/main.py`, tests
+**Acceptance criteria:**
+- [ ] Clustering prompt: JSON-schema-constrained `{archetypes: [{name, description, jd_ids, responsibilities}]}`; every source JD assigned; canned-response tests incl. malformed output
+- [ ] `POST /api/career/cluster` runs clustering over jobs with `parsed`; persists partial `CareerReport` (archetypes_json, jd_ids_json)
+- [ ] `GET /api/career/reports` + `GET /api/career/reports/{id}` list/fetch history
+**Test:** `cd apps/backend && uv run pytest tests/service/test_career_intelligence.py`
+**Out of scope:** scores, narrative (RH-305)
+
+### RH-305: Attraction/fit scoring + advice narrative
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-304 **ADR:** 005
+**Goal:** The full report: deterministic scores + cited narrative.
+**Files:** `apps/backend/app/services/career_intelligence.py`, `apps/backend/app/prompts/` (advice template), tests
+**Acceptance criteria:**
+- [ ] **Deterministic (pure Python, unit-tested):** per archetype — attraction = weighted mean of member applications' interest signals by dimension; fit = fact/requirement coverage ratio (reuse provenance/keyword machinery); gap list = requirements with no supporting fact
+- [ ] `POST /api/career/report` computes scores, then LLM narrative (target / stretch w/ gap-closing plans / deprioritize / market observations); narrative cites only fact_ids, jd_ids, and computed scores — cited IDs validated to exist, else report flagged
+- [ ] Report persisted complete (scores_json, advice_md, model_used); numbers reproducible across runs with identical inputs (test asserts equality)
+**Test:** `cd apps/backend && uv run pytest tests/service/test_career_intelligence.py tests/unit/test_career_scores.py`
+
+### RH-306: Career intelligence dashboard UI
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-305
+**Goal:** `/career` page: archetypes, attraction×fit view, gaps, report history.
+**Files:** `apps/frontend/app/(default)/career/` (new), `apps/frontend/lib/api/career.ts` (new), locales, tests
+**Acceptance criteria:**
+- [ ] Archetype cards: name, member JD count, attraction score, fit score, top gaps; Swiss tokens (no charts libs — typographic/tabular presentation)
+- [ ] Attraction×fit 2×2 placement (want×can-get / stretch / deprioritize quadrants)
+- [ ] Gap items link to interview mode (existing RH-206 panel pattern); "Generate report" + history list w/ advice_md rendered
+- [ ] All 6 locales; lint + vitest pass
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+
+### RH-307: Application status history (outcome events)
+**Size:** S **Assign:** coder (haiku) **Depends:** — **ADR:** 005
+**Goal:** Every status transition recorded for outcome analytics.
+**Files:** `apps/backend/app/models.py` (`status_history` JSON column), `apps/backend/app/database.py`, `apps/backend/app/routers/applications.py`, tests
+**Acceptance criteria:**
+- [ ] All status-changing paths (single PATCH, bulk move, quick-capture create) append `{status, at}`; existing `status` behavior unchanged
+- [ ] Backfill: existing applications get seeded history `[{current status, updated_at}]` on first write
+- [ ] Tests: transition append, bulk append, seed
+**Test:** `cd apps/backend && uv run pytest tests/integration -k application`
+
+### RH-308: Outcome overlay + report nudge
+**Size:** S **Assign:** coder (haiku) **Depends:** RH-305, RH-307
+**Goal:** Response/interview rates per archetype; refresh reminder.
+**Files:** `apps/backend/app/services/career_intelligence.py` (deterministic overlay calc), `apps/frontend/app/(default)/career/` (overlay display + nudge banner), locales, tests
+**Acceptance criteria:**
+- [ ] Per archetype: response rate (reached `response`+) and interview rate (reached `interview`+) from status_history; deterministic unit tests
+- [ ] Career page shows a "report stale — N new applications since last report" banner when ≥5 applications post-date the latest report (client-side check; no scheduler)
+**Test:** `cd apps/backend && uv run pytest tests/unit/test_career_scores.py && cd ../frontend && npm run test`
+
 ## Icebox
-Career intelligence engine (P3: responsibility clustering, attraction/fit analysis, advice reports) · outcome overlay (P3) · JobSpy intake, JD library, multi-JD tailoring (P4) · thank-you email prompt profile on cover-letter module (P4)
+JobSpy intake, JD library, multi-JD tailoring (P4) · thank-you email prompt profile on cover-letter module (P4) · styled "pretty docx" (per ADR-004)

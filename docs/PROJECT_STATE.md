@@ -4,8 +4,9 @@
 > Eng lead: update at the END of every session. Program lead: read at the START of every planning session.
 
 ## Current milestone
-**P2 — Wire the layers in** (tickets RH-201…RH-210 in [BACKLOG.md](BACKLOG.md)). P1 ACCEPTED — see [reviews/P1-review.md](reviews/P1-review.md).
-Recommended dispatch order: wave 1 = RH-201, RH-203, RH-207, RH-209 (independent); wave 2 = RH-202, RH-204, RH-208; wave 3 = RH-205, RH-206, RH-210.
+**P3 — Career intelligence + P2 carryovers** (tickets RH-301…RH-308 in [BACKLOG.md](BACKLOG.md)). P2 ACCEPTED WITH CONDITIONS — see [reviews/P2-review.md](reviews/P2-review.md); RH-301/302 are unmet P2 acceptance criteria and ship first.
+Recommended dispatch order: wave 1 = RH-301, RH-302, RH-303, RH-307 (independent); wave 2 = RH-304; wave 3 = RH-305; wave 4 = RH-306, RH-308. Note P2-F4: serialize locale-touching tickets within a wave if worktree collisions recur.
+**Reviewer instruction (from P2-F3):** review diffs against the BACKLOG ticket's full acceptance criteria, not the worker's summary. Partial delivery must be reported as "partially shipped, criterion X deferred" in PROJECT_STATE — never marked ✅.
 
 ## Baseline (2026-07-09, commit dd9b5c3)
 - Fork of srbhr/Resume-Matcher running locally; Tim's resume uploaded; no issues.
@@ -56,3 +57,4 @@ _(none)_
 - 2026-07-09 — Program lead: RH-208 **Option A (python-docx) APPROVED** → ADR-004, with scope clarification (ATS-safe structure over pixel fidelity; Murphy PDF remains the pixel-faithful artifact). BACKLOG RH-208 updated accordingly. Wave 2 (RH-202, RH-204, RH-208) cleared for dispatch.
 - 2026-07-09 — Eng lead (P2 wave 2): manual integration of RH-202/204/208 from worktrees (pre-P1 base → copy new files + surgical patch). RH-202 adds interview mode (gap Q&A → fact persistence); RH-204 adds facts library page; RH-208 adds docx export. Suite: 625 backend (+40 new), 201 frontend. **P2 wave 2 complete.** Wave 3 ready: RH-205, RH-206, RH-210.
 - 2026-07-10 — Eng lead (P2 wave 3): dispatched RH-205/RH-210 in parallel (worktrees), then RH-206 after RH-205 landed. Manual merge needed for locale files (stash+cherry-pick collision). Suite: 630 backend, 230 frontend (+29 new). **P2 wave 3 complete. P2 complete.**
+- 2026-07-10 — Program lead: P2 reviewed — **ACCEPTED WITH CONDITIONS** (docs/reviews/P2-review.md). Anti-hallucination loop verified end-to-end (RH-201/202); ADR-004 conformance confirmed. Findings: RH-205 shipped without the variant editor (F1 → RH-301); RH-210 never persists variant_of phrasings to blocks (F2 → RH-302); reviewer must check diffs against full ticket criteria, partial delivery must be reported, not ✅'d (F3). ADR-005 accepted (career intelligence: deterministic numbers, LLM narrative; career_reports table; status_history column). **P3 tickets RH-301…308 cut; RH-301/302 mandatory first.**
