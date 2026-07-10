@@ -20,6 +20,7 @@ from app.database import db
 from app.pdf import close_pdf_renderer, init_pdf_renderer
 from app.routers import (
     applications_router,
+    career_router,
     config_router,
     enrichment_router,
     facts_router,
@@ -96,6 +97,7 @@ app.include_router(enrichment_router, prefix="/api/v1")
 app.include_router(applications_router, prefix="/api/v1")
 app.include_router(resume_wizard_router, prefix="/api/v1")
 app.include_router(facts_router, prefix="/api/v1")
+app.include_router(career_router, prefix="/api/v1")
 
 
 @app.get("/")

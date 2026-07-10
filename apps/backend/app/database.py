@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
 from app.db_engine import init_models_sync, make_async_engine, make_sync_engine
-from app.models import ApiKey, Application, Fact, Improvement, Job, Resume
+from app.models import ApiKey, Application, CareerReport, Fact, Improvement, Job, Resume
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +217,18 @@ class Database:
             "confidence": row.confidence,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
+        }
+
+    @staticmethod
+    def _career_report_to_dict(row: CareerReport) -> dict[str, Any]:
+        return {
+            "id": row.id,
+            "created_at": row.created_at,
+            "archetypes_json": row.archetypes_json or [],
+            "jd_ids_json": row.jd_ids_json or [],
+            "scores_json": row.scores_json,
+            "advice_md": row.advice_md,
+            "model_used": row.model_used,
         }
 
     # -- Resume operations --------------------------------------------------
@@ -912,6 +924,45 @@ class Database:
             await session.delete(row)
             await session.commit()
             return True
+
+    # -- CareerReport operations --------------------------------------------
+
+    async def create_career_report(
+        self,
+        archetypes_json: list,
+        jd_ids_json: list,
+        scores_json: dict | None = None,
+        advice_md: str | None = None,
+        model_used: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new career report and return it as a plain dict."""
+        now = _now()
+        async with self._session() as session:
+            row = CareerReport(
+                created_at=now,
+                archetypes_json=archetypes_json,
+                jd_ids_json=jd_ids_json,
+                scores_json=scores_json,
+                advice_md=advice_md,
+                model_used=model_used,
+            )
+            session.add(row)
+            await session.commit()
+            await session.refresh(row)
+            return self._career_report_to_dict(row)
+
+    async def get_career_reports(self) -> list[dict[str, Any]]:
+        """Return all career reports ordered by creation time descending."""
+        async with self._session() as session:
+            stmt = select(CareerReport).order_by(CareerReport.id.desc())
+            result = await session.execute(stmt)
+            return [self._career_report_to_dict(r) for r in result.scalars().all()]
+
+    async def get_career_report(self, report_id: int) -> dict[str, Any] | None:
+        """Return a single career report by ID, or None if not found."""
+        async with self._session() as session:
+            row = await session.get(CareerReport, report_id)
+            return self._career_report_to_dict(row) if row else None
 
     # -- Encrypted API key store (sync; read on the LLM hot path) -----------
 

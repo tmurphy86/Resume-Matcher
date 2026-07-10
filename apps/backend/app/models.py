@@ -142,6 +142,20 @@ class ApiKey(Base):
     updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
 
 
+class CareerReport(Base):
+    """A career intelligence report grouping JDs into named role archetypes."""
+
+    __tablename__ = "career_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
+    archetypes_json: Mapped[list] = mapped_column(JSON, default=list)
+    jd_ids_json: Mapped[list] = mapped_column(JSON, default=list)
+    scores_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    advice_md: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_used: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class Fact(Base):
     """A verified career fact in the fact base."""
 

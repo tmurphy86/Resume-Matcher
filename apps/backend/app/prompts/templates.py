@@ -206,6 +206,35 @@ Rules:
 Job description:
 {job_description}"""
 
+ARCHETYPE_CLUSTER_PROMPT = """You are a career analyst. Cluster the following job descriptions into named role archetypes.
+
+Respond in {output_language}.
+
+Output ONLY a JSON object — no prose, no markdown fences.
+
+Required output schema:
+{{
+  "archetypes": [
+    {{
+      "name": "Short archetype name (e.g. 'Backend Platform Engineer')",
+      "description": "One to two sentence description of the archetype.",
+      "jd_ids": ["job-id-1", "job-id-2"],
+      "responsibilities": ["Shared responsibility theme 1", "Shared responsibility theme 2"]
+    }}
+  ]
+}}
+
+Rules:
+- Every job_id in the input MUST appear in exactly one archetype's jd_ids list.
+- Create between 1 and {max_archetypes} archetypes; merge very similar roles rather than splitting them.
+- "name" should be a concise role label recognisable to a recruiter.
+- "description" summarises what makes this cluster distinct.
+- "responsibilities" lists 3-7 shared responsibility themes for the archetype (not copied verbatim from JDs).
+- Do NOT invent job IDs; use only the IDs provided.
+
+Job descriptions to cluster:
+{job_descriptions_block}"""
+
 EXTRACT_KEYWORDS_PROMPT = """Extract job requirements as JSON. Output ONLY the JSON object, no other text.
 
 Example format:
