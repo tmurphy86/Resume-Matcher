@@ -62,3 +62,10 @@ class AnswerGapRequest(BaseModel):
     answer: str
     job_id: str
     resume_id: str
+
+
+class ConfirmVariantRequest(BaseModel):
+    """Request to persist a variant_of phrasing to master-resume blocks."""
+
+    candidate_statement: str
+    existing_fact_id: str

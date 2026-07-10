@@ -25,6 +25,7 @@ import {
   deleteFact,
   extractFacts,
   confirmFacts,
+  confirmVariant,
   importResumeFacts,
   type Fact,
   type ConfirmResult,
@@ -79,6 +80,7 @@ export default function FactsPage() {
   const [importResults, setImportResults] = useState<ImportedFact[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [importConfirming, setImportConfirming] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
   // ── Extract modal ─────────────────────────────────────────────────────────
   const [extractOpen, setExtractOpen] = useState(false);
@@ -239,6 +241,7 @@ export default function FactsPage() {
     setImportError(null);
     setImportResults([]);
     setImportSelectedId('');
+    setSelectedVariants(new Set());
     setImportLoading(true);
     try {
       const allResumes = await fetchResumeList(true);
@@ -252,11 +255,24 @@ export default function FactsPage() {
     }
   };
 
+  const toggleVariant = (factId: string) => {
+    setSelectedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(factId)) {
+        next.delete(factId);
+      } else {
+        next.add(factId);
+      }
+      return next;
+    });
+  };
+
   const runImport = async () => {
     if (!importSelectedId) return;
     setImportLoading(true);
     setImportError(null);
     setImportResults([]);
+    setSelectedVariants(new Set());
     try {
       const results = await importResumeFacts(importSelectedId);
       setImportResults(results);
@@ -270,13 +286,25 @@ export default function FactsPage() {
 
   const handleConfirmImport = async () => {
     const newFacts = importResults.filter((r) => r.group === 'new');
-    if (newFacts.length === 0) return;
+    const variantFacts = importResults.filter(
+      (r) => r.group === 'variant_of' && selectedVariants.has(r.fact_id)
+    );
+    if (newFacts.length === 0 && variantFacts.length === 0) return;
     setImportConfirming(true);
     setImportError(null);
     try {
-      const results: ConfirmResult[] = await confirmFacts(newFacts);
-      const saved = results.filter((r): r is Fact => !('status' in r));
-      setFacts((prev) => [...prev, ...saved]);
+      const savedFacts: Fact[] = [];
+      if (newFacts.length > 0) {
+        const results: ConfirmResult[] = await confirmFacts(newFacts);
+        savedFacts.push(...results.filter((r): r is Fact => !('status' in r)));
+      }
+      // Persist each checked variant_of phrasing to the matching master-resume block(s).
+      await Promise.all(
+        variantFacts.map((r) => confirmVariant(r.statement, r.existing_fact_id ?? ''))
+      );
+      if (savedFacts.length > 0) {
+        setFacts((prev) => [...prev, ...savedFacts]);
+      }
       setImportOpen(false);
     } catch (err) {
       setImportError(t('facts.errors.extractFailed'));
@@ -656,7 +684,7 @@ export default function FactsPage() {
                   </div>
                 )}
 
-                {/* Variant group — Hyper Blue */}
+                {/* Variant group — Hyper Blue (checkboxes to persist to blocks) */}
                 {importResults.filter((r) => r.group === 'variant_of').length > 0 && (
                   <div>
                     <p className="mb-2 border-l-4 border-[#1D4ED8] pl-2 font-mono text-xs uppercase tracking-wider text-[#1D4ED8]">
@@ -667,15 +695,26 @@ export default function FactsPage() {
                       {importResults
                         .filter((r) => r.group === 'variant_of')
                         .map((r) => (
-                          <div key={r.fact_id} className="border border-[#1D4ED8] p-3">
-                            <p className="text-sm leading-snug">{r.statement}</p>
-                            {r.existing_statement && (
-                              <p className="mt-1 font-mono text-xs text-ink-soft">
-                                {t('facts.importModal.existingFact')}
-                                {r.existing_statement}
-                              </p>
-                            )}
-                          </div>
+                          <label
+                            key={r.fact_id}
+                            className="flex cursor-pointer items-start gap-3 border border-[#1D4ED8] p-3 hover:bg-secondary transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedVariants.has(r.fact_id)}
+                              onChange={() => toggleVariant(r.fact_id)}
+                              className="mt-1 h-4 w-4 border-black accent-primary"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm leading-snug">{r.statement}</p>
+                              {r.existing_statement && (
+                                <p className="mt-1 font-mono text-xs text-ink-soft">
+                                  {t('facts.importModal.existingFact')}
+                                  {r.existing_statement}
+                                </p>
+                              )}
+                            </div>
+                          </label>
                         ))}
                     </div>
                   </div>
@@ -705,7 +744,9 @@ export default function FactsPage() {
                 <Button
                   onClick={handleConfirmImport}
                   disabled={
-                    importConfirming || importResults.filter((r) => r.group === 'new').length === 0
+                    importConfirming ||
+                    (importResults.filter((r) => r.group === 'new').length === 0 &&
+                      selectedVariants.size === 0)
                   }
                   className="border border-black bg-primary text-white shadow-sw-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
                 >

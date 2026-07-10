@@ -100,6 +100,17 @@ export interface ImportedFact extends Fact {
   existing_statement: string | null;
 }
 
+export async function confirmVariant(
+  candidateStatement: string,
+  existingFactId: string
+): Promise<{ status: string; matched_blocks: boolean }> {
+  const res = await apiPost('/facts/confirm-variant', {
+    candidate_statement: candidateStatement,
+    existing_fact_id: existingFactId,
+  });
+  return asJson<{ status: string; matched_blocks: boolean }>(res, 'Failed to confirm variant');
+}
+
 export async function importResumeFacts(resumeId: string): Promise<ImportedFact[]> {
   const res = await apiFetch(`/facts/import-resume?resume_id=${encodeURIComponent(resumeId)}`, {
     method: 'POST',

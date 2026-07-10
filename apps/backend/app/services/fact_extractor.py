@@ -1,9 +1,11 @@
 """Service for extracting and confirming career facts from master resumes."""
 
+import copy
 import difflib
 import json
 import logging
 from typing import Any
+from uuid import uuid4
 
 from fastapi import HTTPException
 
@@ -243,6 +245,101 @@ async def import_resume_facts(source_resume_id: str) -> list[dict[str, Any]]:
         )
 
     return results
+
+
+async def persist_variant_to_blocks(
+    candidate_statement: str,
+    existing_fact_id: str,
+) -> dict[str, Any]:
+    """Append a variant phrasing to master-resume block(s) that cite existing_fact_id.
+
+    Algorithm:
+    1. Load master resume and its processed_data.
+    2. Scan ``summary_blocks`` and ``workExperience[*].bullet_blocks`` for any
+       block whose variants include ``existing_fact_id`` in their ``fact_ids``.
+    3. For each matching block: append a new ``BlockVariant`` (unless an identical
+       text already exists — dedup guard).
+    4. If no block cites the fact: create a new ``BulletBlock`` containing the
+       new variant and append it to ``summary_blocks``.
+    5. Persist the mutated ``processed_data`` back via ``db.update_resume``.
+
+    Returns a dict ``{"status": "ok", "matched_blocks": bool}`` indicating
+    whether existing blocks were found (True) or a new block was created (False).
+
+    Raises:
+        HTTPException(404): Master resume not found or has no processed_data.
+        HTTPException(500): Any unexpected persistence error.
+    """
+    master = await db.get_master_resume()
+    if master is None:
+        raise HTTPException(status_code=404, detail="No master resume found.")
+
+    processed_data = master.get("processed_data")
+    if not processed_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Master resume has no processed data.",
+        )
+
+    try:
+        data: dict[str, Any] = copy.deepcopy(processed_data)
+
+        # Gather all mutable block dicts from both locations.
+        # summary_blocks is a flat list; workExperience is a list of experience
+        # entries, each of which has bullet_blocks.
+        all_blocks: list[dict[str, Any]] = list(data.get("summary_blocks") or [])
+        for exp in data.get("workExperience") or []:
+            all_blocks.extend(exp.get("bullet_blocks") or [])
+
+        matched_any = False
+        for block in all_blocks:
+            variants: list[dict[str, Any]] = block.get("variants") or []
+            cites_fact = any(
+                existing_fact_id in (v.get("fact_ids") or []) for v in variants
+            )
+            if not cites_fact:
+                continue
+            matched_any = True
+            # Dedup: do not append if the same text already exists in this block.
+            if any(v.get("text") == candidate_statement for v in variants):
+                continue
+            variants.append(
+                {
+                    "id": str(uuid4()),
+                    "text": candidate_statement,
+                    "tags": [],
+                    "fact_ids": [existing_fact_id],
+                }
+            )
+            block["variants"] = variants
+
+        if not matched_any:
+            # No existing block cites this fact — create a new block in summary_blocks.
+            new_variant_id = str(uuid4())
+            new_block: dict[str, Any] = {
+                "id": str(uuid4()),
+                "active_variant_id": new_variant_id,
+                "variants": [
+                    {
+                        "id": new_variant_id,
+                        "text": candidate_statement,
+                        "tags": [],
+                        "fact_ids": [existing_fact_id],
+                    }
+                ],
+            }
+            if not isinstance(data.get("summary_blocks"), list):
+                data["summary_blocks"] = []
+            data["summary_blocks"].append(new_block)
+
+        await db.update_resume(master["resume_id"], {"processed_data": data})
+        return {"status": "ok", "matched_blocks": matched_any}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to persist variant to blocks: %s", e)
+        raise HTTPException(status_code=500, detail="Operation failed.")
 
 
 async def confirm_facts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:

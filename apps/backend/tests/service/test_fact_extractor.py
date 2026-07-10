@@ -4,7 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.fact_extractor import confirm_facts, extract_candidate_facts, import_resume_facts
+from app.services.fact_extractor import (
+    confirm_facts,
+    extract_candidate_facts,
+    import_resume_facts,
+    persist_variant_to_blocks,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -704,3 +709,168 @@ class TestImportResumeFacts:
 
         assert exc_info.value.status_code == 404
         mock_llm.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# TestPersistVariantToBlocks (RH-302)
+# ---------------------------------------------------------------------------
+
+# Processed data with a bullet_block that cites fact-001.
+_PROCESSED_DATA_WITH_BLOCK: dict = {
+    "personalInfo": {"name": "Jane Doe", "title": "Engineer"},
+    "summary": "Backend engineer.",
+    "summary_blocks": [],
+    "workExperience": [
+        {
+            "id": 1,
+            "title": "Senior Engineer",
+            "company": "Acme Corp",
+            "years": "Jan 2021 - Present",
+            "description": ["Led a team"],
+            "bullet_blocks": [
+                {
+                    "id": "block-1",
+                    "active_variant_id": "variant-1",
+                    "variants": [
+                        {
+                            "id": "variant-1",
+                            "text": "Led a team of engineers",
+                            "tags": [],
+                            "fact_ids": ["fact-001"],
+                        }
+                    ],
+                }
+            ],
+        }
+    ],
+    "education": [],
+    "personalProjects": [],
+    "additional": {"technicalSkills": []},
+    "customSections": {},
+}
+
+_MASTER_RESUME: dict = {
+    "resume_id": "master-resume-1",
+    "is_master": True,
+    "processed_data": _PROCESSED_DATA_WITH_BLOCK,
+}
+
+
+class TestPersistVariantToBlocks:
+    """Tests for persist_variant_to_blocks() — RH-302."""
+
+    @patch("app.services.fact_extractor.db")
+    async def test_variant_appended_to_existing_block(self, mock_db: MagicMock) -> None:
+        """Variant is appended to every block that cites the existing_fact_id."""
+        import copy
+
+        master = copy.deepcopy(_MASTER_RESUME)
+        mock_db.get_master_resume = AsyncMock(return_value=master)
+        mock_db.update_resume = AsyncMock(return_value=master)
+
+        result = await persist_variant_to_blocks(
+            candidate_statement="Managed a squad of 8 engineers",
+            existing_fact_id="fact-001",
+        )
+
+        assert result["status"] == "ok"
+        assert result["matched_blocks"] is True
+
+        # Verify update_resume was called with the new variant appended.
+        call_args = mock_db.update_resume.call_args
+        updated_data: dict = call_args.args[1]["processed_data"]
+        block = updated_data["workExperience"][0]["bullet_blocks"][0]
+        texts = [v["text"] for v in block["variants"]]
+        assert "Managed a squad of 8 engineers" in texts
+        # Original variant should still be there.
+        assert "Led a team of engineers" in texts
+        # New variant must cite the fact.
+        new_variant = next(v for v in block["variants"] if v["text"] == "Managed a squad of 8 engineers")
+        assert "fact-001" in new_variant["fact_ids"]
+
+    @patch("app.services.fact_extractor.db")
+    async def test_block_created_when_absent(self, mock_db: MagicMock) -> None:
+        """No existing block cites the fact → new BulletBlock appended to summary_blocks."""
+        import copy
+
+        master = copy.deepcopy(_MASTER_RESUME)
+        mock_db.get_master_resume = AsyncMock(return_value=master)
+        mock_db.update_resume = AsyncMock(return_value=master)
+
+        result = await persist_variant_to_blocks(
+            candidate_statement="Completely new accomplishment",
+            existing_fact_id="fact-999",  # no block cites this
+        )
+
+        assert result["status"] == "ok"
+        assert result["matched_blocks"] is False
+
+        call_args = mock_db.update_resume.call_args
+        updated_data: dict = call_args.args[1]["processed_data"]
+        summary_blocks = updated_data["summary_blocks"]
+        assert len(summary_blocks) == 1
+        new_block = summary_blocks[0]
+        assert len(new_block["variants"]) == 1
+        new_variant = new_block["variants"][0]
+        assert new_variant["text"] == "Completely new accomplishment"
+        assert "fact-999" in new_variant["fact_ids"]
+        # active_variant_id must point to the new variant.
+        assert new_block["active_variant_id"] == new_variant["id"]
+
+    @patch("app.services.fact_extractor.db")
+    async def test_dedup_same_text_not_appended_twice(self, mock_db: MagicMock) -> None:
+        """Same candidate_statement already exists in the block → not appended again."""
+        import copy
+
+        # Block already has the exact text we want to append.
+        master = copy.deepcopy(_MASTER_RESUME)
+        existing_text = "Led a team of engineers"
+        mock_db.get_master_resume = AsyncMock(return_value=master)
+        mock_db.update_resume = AsyncMock(return_value=master)
+
+        result = await persist_variant_to_blocks(
+            candidate_statement=existing_text,
+            existing_fact_id="fact-001",
+        )
+
+        assert result["status"] == "ok"
+        assert result["matched_blocks"] is True
+
+        call_args = mock_db.update_resume.call_args
+        updated_data: dict = call_args.args[1]["processed_data"]
+        block = updated_data["workExperience"][0]["bullet_blocks"][0]
+        # Should still have exactly 1 variant (no duplicate added).
+        assert len(block["variants"]) == 1
+
+    @patch("app.services.fact_extractor.db")
+    async def test_raises_404_when_no_master_resume(self, mock_db: MagicMock) -> None:
+        """HTTPException(404) when no master resume exists."""
+        from fastapi import HTTPException
+
+        mock_db.get_master_resume = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await persist_variant_to_blocks(
+                candidate_statement="Some statement",
+                existing_fact_id="fact-001",
+            )
+
+        assert exc_info.value.status_code == 404
+        mock_db.update_resume.assert_not_called()
+
+    @patch("app.services.fact_extractor.db")
+    async def test_raises_404_when_no_processed_data(self, mock_db: MagicMock) -> None:
+        """HTTPException(404) when master resume has no processed_data."""
+        from fastapi import HTTPException
+
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "master-1", "is_master": True, "processed_data": None}
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await persist_variant_to_blocks(
+                candidate_statement="Some statement",
+                existing_fact_id="fact-001",
+            )
+
+        assert exc_info.value.status_code == 404

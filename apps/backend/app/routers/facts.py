@@ -6,7 +6,7 @@ from typing import Any, Union
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import db
-from app.schemas.facts import AnswerGapRequest, DuplicateFactResponse, FactCreate, FactResponse, FactUpdate
+from app.schemas.facts import AnswerGapRequest, ConfirmVariantRequest, DuplicateFactResponse, FactCreate, FactResponse, FactUpdate
 from app.services import fact_extractor, interview_mode
 
 logger = logging.getLogger(__name__)
@@ -120,6 +120,24 @@ async def import_resume_endpoint(
     Does not persist anything — call POST /facts/confirm to save ``new`` items.
     """
     return await fact_extractor.import_resume_facts(resume_id)
+
+
+@router.post("/confirm-variant", response_model=dict, status_code=200)
+async def confirm_variant_endpoint(
+    request: ConfirmVariantRequest,
+) -> dict[str, Any]:
+    """Persist a variant_of phrasing to master-resume block(s) citing existing_fact_id.
+
+    Finds all blocks (in ``summary_blocks`` and ``workExperience[*].bullet_blocks``)
+    whose variants already cite ``existing_fact_id``, then appends a new
+    ``BlockVariant`` (text=candidate_statement) with a dedup guard.  If no
+    existing block cites the fact a new ``BulletBlock`` is created and appended
+    to ``summary_blocks``.
+    """
+    return await fact_extractor.persist_variant_to_blocks(
+        candidate_statement=request.candidate_statement,
+        existing_fact_id=request.existing_fact_id,
+    )
 
 
 @router.post("/gap-questions", response_model=list[dict])
