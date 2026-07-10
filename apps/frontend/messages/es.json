@@ -1160,7 +1160,8 @@
       "jdCount": "JDs"
     },
     "advice": {
-      "title": "Consejos estratégicos"
+      "title": "Consejos estratégicos",
+      "unverified": "Generado por IA · sin verificar"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los informes de carrera.",

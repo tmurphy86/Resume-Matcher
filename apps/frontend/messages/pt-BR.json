@@ -1160,7 +1160,8 @@
       "jdCount": "vagas"
     },
     "advice": {
-      "title": "Conselhos estratégicos"
+      "title": "Conselhos estratégicos",
+      "unverified": "Gerado por IA · não verificado"
     },
     "errors": {
       "loadFailed": "Falha ao carregar relatórios de carreira.",

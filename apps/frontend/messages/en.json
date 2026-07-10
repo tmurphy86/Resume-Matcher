@@ -1160,7 +1160,8 @@
       "jdCount": "JDs"
     },
     "advice": {
-      "title": "Strategic Advice"
+      "title": "Strategic Advice",
+      "unverified": "AI-generated · unverified"
     },
     "errors": {
       "loadFailed": "Failed to load career reports.",

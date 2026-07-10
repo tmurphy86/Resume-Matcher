@@ -1,9 +1,11 @@
 import DOMPurify from 'isomorphic-dompurify';
 
 /**
- * Whitelist of allowed HTML tags for rich text content
+ * Whitelist of allowed HTML tags for rich text content.
+ * `p` and `br` are included for markdown paragraph/line-break rendering
+ * (neither can carry XSS risk — `p` has no dangerous attributes, `br` is a void element).
  */
-const ALLOWED_TAGS = ['strong', 'em', 'u', 'a'];
+const ALLOWED_TAGS = ['strong', 'em', 'u', 'a', 'p', 'br'];
 
 /**
  * Whitelist of allowed HTML attributes

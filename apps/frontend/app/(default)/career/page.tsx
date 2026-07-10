@@ -44,7 +44,8 @@ function formatFit(val: number): string {
 
 /** Convert plain markdown (subset) to HTML suitable for sanitizeHtml whitelist. */
 function markdownToSafeHtml(md: string): string {
-  // Very lightweight: bold, italic, headings, paragraphs, line breaks.
+  // Very lightweight: bold, italic, paragraphs, line breaks.
+  // `#` heading syntax is NOT parsed — headings are not in the whitelist.
   // Deliberately minimal — the sanitizeHtml call strips anything else.
   return md
     .replace(/&/g, '&amp;')
@@ -540,6 +541,9 @@ export default function CareerPage() {
                       <h2 className="mb-4 font-serif text-2xl uppercase tracking-tight">
                         {t('career.advice.title')}
                       </h2>
+                      <p className="font-mono text-xs text-black/60 mb-2">
+                        {t('career.advice.unverified')}
+                      </p>
                       <div
                         className="prose-sm max-w-none font-sans leading-relaxed [&_strong]:font-bold [&_em]:italic [&_a]:text-primary [&_a]:underline"
                         dangerouslySetInnerHTML={{

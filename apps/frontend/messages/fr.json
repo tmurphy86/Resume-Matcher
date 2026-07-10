@@ -1160,7 +1160,8 @@
       "jdCount": "offres"
     },
     "advice": {
-      "title": "Conseils stratégiques"
+      "title": "Conseils stratégiques",
+      "unverified": "Généré par IA · non vérifié"
     },
     "errors": {
       "loadFailed": "Échec du chargement des rapports de carrière.",

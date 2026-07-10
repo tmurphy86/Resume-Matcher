@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +61,13 @@ export default function TailorPage() {
 
   // Selected gap keyword for provenance panel
   const [selectedGapKeyword, setSelectedGapKeyword] = useState<string | null>(null);
+
+  // Sync ?gap= URL param → selectedGapKeyword on mount
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const gap = searchParams.get('gap');
+    if (gap) setSelectedGapKeyword(decodeURIComponent(gap));
+  }, [searchParams]);
 
   // Elapsed timer for long operations
   const [elapsed, setElapsed] = useState(0);

@@ -1160,7 +1160,8 @@
       "jdCount": "件"
     },
     "advice": {
-      "title": "戦略的アドバイス"
+      "title": "戦略的アドバイス",
+      "unverified": "AI生成 · 未検証"
     },
     "errors": {
       "loadFailed": "キャリアレポートの読み込みに失敗しました。",

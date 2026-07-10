@@ -1160,7 +1160,8 @@
       "jdCount": "职位"
     },
     "advice": {
-      "title": "战略建议"
+      "title": "战略建议",
+      "unverified": "AI 生成 · 未经验证"
     },
     "errors": {
       "loadFailed": "加载职业报告失败。",
