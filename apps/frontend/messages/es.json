@@ -1086,7 +1086,9 @@
       "description": "Revisa y confirma los hechos candidatos extraídos de tu currículum principal.",
       "confirmSelected": "Confirmar seleccionados",
       "duplicate": "Duplicado de un hecho existente",
-      "noMasterResume": "No se encontró currículum principal. Sube uno primero."
+      "noMasterResume": "No se encontró currículum principal. Sube uno primero.",
+      "allDuplicates": "Todos los hechos extraídos ya existen en tu biblioteca.",
+      "noFactsFound": "No se extrajeron hechos de este currículum."
     },
     "errors": {
       "loadFailed": "Error al cargar hechos.",

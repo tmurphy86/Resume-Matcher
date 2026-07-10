@@ -874,3 +874,147 @@ class TestPersistVariantToBlocks:
             )
 
         assert exc_info.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# TestBug003Regression — silent-empty extract guard
+# ---------------------------------------------------------------------------
+
+
+class TestBug003Regression:
+    """Regression tests for BUG-003: extract silently returned [] when the LLM
+    responded with a shape that had no recognised wrapper key.
+
+    Root cause: FACT_EXTRACTION_PROMPT asked for a bare JSON array, but
+    ``_extract_json`` (brace-balance scan) extracted only the FIRST fact dict
+    from ``[{...}, ...]``, producing ``{"statement": "...", ...}`` with no
+    ``"facts"`` key.  ``raw.get("facts") or ...`` then returned ``None``, and
+    ``candidates`` was silently set to ``[]``.
+
+    The fix:
+    1. Prompt now asks for ``{"facts": [...]}`` so the LLM output is a dict
+       that ``_extract_json`` can extract cleanly.
+    2. The service raises ``HTTPException(500)`` when the LLM returns a dict
+       with no recognised wrapper key, making the failure explicit.
+    3. Each candidate gets a temporary ``fact_id`` UUID for frontend key/select.
+    """
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_raises_500_when_llm_returns_flat_fact_dict(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """BUG-003 regression: LLM returns a single flat fact dict (no 'facts'
+        wrapper key) → HTTPException(500) instead of silent empty list.
+
+        This is exactly what happened before the fix: ``_extract_json`` pulled
+        the first ``{...}`` out of ``[{...}]``, leaving a dict like
+        ``{"statement": "...", "context": "..."}`` with no recognised wrapper.
+        Pre-fix code returned ``[]`` without any error; post-fix code raises so
+        the frontend shows "Extraction failed" rather than an empty modal.
+        """
+        from fastapi import HTTPException
+
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "resume-bug003",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        # Simulate what _extract_json returned in the buggy scenario: a single
+        # flat fact dict extracted from the first { in the LLM array response.
+        mock_llm.return_value = {
+            "statement": "Led a team of 8 engineers",
+            "context": "Acme Corp",
+            "source": "workExperience",
+            "metrics_json": {},
+            "tags_json": ["leadership"],
+            "confidence": "candidate",
+        }
+
+        with pytest.raises(HTTPException) as exc_info:
+            await extract_candidate_facts("resume-bug003")
+
+        assert exc_info.value.status_code == 500
+        assert "Fact extraction failed" in exc_info.value.detail
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_facts_wrapper_returns_candidates(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """Post-fix: LLM returns {"facts": [...]} → candidates returned correctly.
+
+        This is the format the updated FACT_EXTRACTION_PROMPT instructs, and
+        the format that ``complete_json`` + ``_extract_json`` can parse
+        correctly because they both handle ``{...}`` objects.
+        """
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "resume-bug003-fixed",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        mock_llm.return_value = {"facts": [SAMPLE_CANDIDATE]}
+
+        result = await extract_candidate_facts("resume-bug003-fixed")
+
+        assert len(result) == 1
+        assert result[0]["statement"] == SAMPLE_CANDIDATE["statement"]
+        assert result[0]["confidence"] == "candidate"
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_each_candidate_gets_unique_fact_id(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """Each candidate gets a unique temporary fact_id for frontend key tracking.
+
+        Pre-fix all candidates had fact_id='' (FactResponse default), causing
+        React duplicate-key collisions and broken per-item checkbox state.
+        """
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "resume-uuid-test",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        mock_llm.return_value = {
+            "facts": [
+                {**SAMPLE_CANDIDATE, "statement": "Fact A"},
+                {**SAMPLE_CANDIDATE, "statement": "Fact B"},
+            ]
+        }
+
+        result = await extract_candidate_facts("resume-uuid-test")
+
+        assert len(result) == 2
+        ids = [r["fact_id"] for r in result]
+        # Each ID must be a non-empty string and all must be distinct.
+        assert all(isinstance(fid, str) and fid for fid in ids)
+        assert ids[0] != ids[1]
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_empty_facts_list_returns_empty_not_error(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """{"facts": []} is a valid LLM response (no facts found) → returns [],
+        does NOT raise.  This is distinct from the BUG-003 scenario where the
+        key was absent entirely.
+        """
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "resume-empty-facts",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        mock_llm.return_value = {"facts": []}
+
+        result = await extract_candidate_facts("resume-empty-facts")
+
+        assert result == []

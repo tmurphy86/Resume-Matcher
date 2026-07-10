@@ -1086,7 +1086,9 @@
       "description": "Review and confirm candidate facts extracted from your master resume.",
       "confirmSelected": "Confirm selected",
       "duplicate": "Duplicate of existing fact",
-      "noMasterResume": "No master resume found. Upload one first."
+      "noMasterResume": "No master resume found. Upload one first.",
+      "allDuplicates": "All extracted facts already exist in your library.",
+      "noFactsFound": "No facts were extracted from this resume."
     },
     "errors": {
       "loadFailed": "Failed to load facts.",

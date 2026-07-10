@@ -780,11 +780,21 @@ export default function FactsPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : extractError ? (
+              // Empty-state 1: no master resume, or LLM/parse failure
               <p className="font-mono text-sm text-destructive">{extractError}</p>
             ) : candidates.length === 0 ? (
-              <p className="font-mono text-sm text-ink-soft">{t('facts.empty')}</p>
+              // Empty-state 2: LLM found no facts in the resume (valid empty response)
+              <p className="font-mono text-sm text-ink-soft">
+                {t('facts.extractModal.noFactsFound')}
+              </p>
             ) : (
               <div className="flex flex-col gap-2">
+                {/* Empty-state 3: every candidate is a duplicate of an existing fact */}
+                {candidates.every((c) => c.duplicate_of) && (
+                  <p className="mb-2 font-mono text-xs text-ink-soft border-l-4 border-warning pl-2">
+                    {t('facts.extractModal.allDuplicates')}
+                  </p>
+                )}
                 {candidates.map((c) => (
                   <label
                     key={c.fact_id}

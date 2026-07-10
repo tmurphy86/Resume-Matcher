@@ -19,4 +19,6 @@ Guidelines:
 - Include facts from all sections: work experience, education, projects, skills, and awards
 - Keep each statement self-contained; include enough context that it stands alone without the surrounding resume
 
-Return ONLY a JSON array of fact objects with these exact fields. No additional text, no markdown fences."""
+Return ONLY a JSON object with a "facts" key whose value is an array of fact objects with these exact fields.
+Example structure: {{"facts": [{{"statement": "...", "context": "...", "source": "...", "metrics_json": {{}}, "tags_json": [], "confidence": "candidate"}}]}}
+No additional text, no markdown fences."""

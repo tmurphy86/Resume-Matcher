@@ -124,11 +124,32 @@ async def extract_candidate_facts(resume_id: str) -> list[dict[str, Any]]:
             detail="Fact extraction failed. Please try again.",
         )
 
-    # The LLM may return a bare list or wrap it: {"facts": [...]}
-    if isinstance(raw, dict):
-        candidates = raw.get("facts") or raw.get("items") or raw.get("data") or []
-    elif isinstance(raw, list):
+    # The LLM should return {"facts": [...]} (as the prompt instructs).
+    # Also accept bare lists and alternative wrapper keys for robustness.
+    if isinstance(raw, list):
         candidates = raw
+    elif isinstance(raw, dict):
+        if "facts" in raw:
+            candidates = raw["facts"] if isinstance(raw["facts"], list) else []
+        elif "items" in raw:
+            candidates = raw["items"] if isinstance(raw["items"], list) else []
+        elif "data" in raw:
+            candidates = raw["data"] if isinstance(raw["data"], list) else []
+        else:
+            # No recognised wrapper key — the LLM ignored the "facts" wrapper
+            # instruction (e.g. _extract_json extracted a single fact dict from
+            # a bare array).  Raise instead of silently returning [] so the
+            # frontend surfaces an actionable error rather than an empty modal.
+            # (BUG-003 regression guard.)
+            logger.error(
+                "Unexpected LLM response shape for fact extraction: keys=%s "
+                "(expected 'facts' key).  Prompt may need review.",
+                list(raw.keys()),
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Fact extraction failed. Please try again.",
+            )
     else:
         logger.warning("Unexpected LLM response type for fact extraction: %s", type(raw))
         candidates = []
@@ -140,13 +161,18 @@ async def extract_candidate_facts(resume_id: str) -> list[dict[str, Any]]:
         logger.error("Failed to load existing facts for dedup check: %s", e)
         existing_facts = []
 
-    # Normalize candidates and annotate with duplicate_of
+    # Normalize candidates and annotate with duplicate_of.
+    # Each candidate gets a temporary fact_id (UUID) so the frontend can use it
+    # as a stable React key and for per-item selection state.  These IDs are
+    # never persisted — /facts/confirm generates real IDs on save.
     annotated_candidates: list[dict[str, Any]] = []
     for item in candidates:
         if not isinstance(item, dict):
             continue
 
         normalized = _normalize_candidate(item, resume_id)
+        # Assign a temporary unique ID for frontend key/selection tracking.
+        normalized["fact_id"] = str(uuid4())
 
         # Check if this candidate is a duplicate of an existing fact
         duplicate = _find_duplicate_fact(normalized.get("statement", ""), existing_facts)

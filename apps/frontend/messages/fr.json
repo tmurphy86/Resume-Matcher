@@ -1105,7 +1105,9 @@
       "description": "Examinez et confirmez les faits candidats extraits de votre CV principal.",
       "confirmSelected": "Confirmer la sélection",
       "duplicate": "Doublon d'un fait existant",
-      "noMasterResume": "Aucun CV principal trouvé. Veuillez en télécharger un d'abord."
+      "noMasterResume": "Aucun CV principal trouvé. Veuillez en télécharger un d'abord.",
+      "allDuplicates": "Tous les faits extraits existent déjà dans votre bibliothèque.",
+      "noFactsFound": "Aucun fait n'a été extrait de ce CV."
     },
     "errors": {
       "loadFailed": "Échec du chargement des faits.",
