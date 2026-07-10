@@ -588,6 +588,17 @@
       "timeout": "リクエストがタイムアウトしました。より短い求人内容で再試行するか、接続を確認してください。",
       "failedToPreview": "履歴書をプレビューできませんでした。設定で API キーを確認してから、もう一度お試しください。",
       "failedToConfirm": "変更を適用できませんでした。もう一度お試しください。"
+    },
+    "provenance": {
+      "title": "出所",
+      "covered": "カバー済み",
+      "uncovered": "未カバー",
+      "broken": "破損",
+      "verifyGaps": "インタビューモードでギャップを確認",
+      "unverifiedWarning": "{count} 件の変更が事実に裏付けられていません",
+      "noProvenance": "出所データなし",
+      "uncoveredItems": "未カバーのブロック",
+      "brokenItems": "壊れた引用"
     }
   },
   "settings": {

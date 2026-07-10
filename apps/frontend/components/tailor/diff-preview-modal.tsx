@@ -8,6 +8,7 @@ import { useTranslations } from '@/lib/i18n';
 import type {
   ResumeDiffSummary,
   ResumeFieldDiff,
+  UnverifiedChange,
 } from '@/components/common/resume_previewer_context';
 
 interface DiffPreviewModalProps {
@@ -19,6 +20,7 @@ interface DiffPreviewModalProps {
   diffSummary?: ResumeDiffSummary;
   detailedChanges?: ResumeFieldDiff[];
   errorMessage?: string;
+  unverified?: UnverifiedChange[];
 }
 
 export function DiffPreviewModal({
@@ -30,6 +32,7 @@ export function DiffPreviewModal({
   diffSummary,
   detailedChanges,
   errorMessage,
+  unverified,
 }: DiffPreviewModalProps) {
   const { t } = useTranslations();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -107,6 +110,9 @@ export function DiffPreviewModal({
     }
     setExpandedSections(newExpanded);
   };
+
+  // Build set of unverified field paths for badge lookup
+  const unverifiedPaths = new Set((unverified ?? []).map((u) => u.path));
 
   // Group changes by type
   const summaryChanges = detailedChanges.filter((c) => c.field_type === 'summary');
@@ -210,7 +216,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('summary')}
             >
               {summaryChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -224,7 +234,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('skills')}
             >
               {skillChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -238,7 +252,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('experience')}
             >
               {experienceChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -252,7 +270,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('descriptions')}
             >
               {descChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -266,7 +288,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('education')}
             >
               {educationChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -280,7 +306,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('project')}
             >
               {projectChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -294,7 +324,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('certifications')}
             >
               {certChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -308,7 +342,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('languages')}
             >
               {languageChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -322,7 +360,11 @@ export function DiffPreviewModal({
               onToggle={() => toggleSection('awards')}
             >
               {awardChanges.map((change, idx) => (
-                <ChangeItem key={idx} change={change} />
+                <ChangeItem
+                  key={idx}
+                  change={change}
+                  isUnverified={unverifiedPaths.has(change.field_path)}
+                />
               ))}
             </ChangeSection>
           )}
@@ -417,9 +459,10 @@ function ChangeSection({ title, count, isExpanded, onToggle, children }: ChangeS
 // Helper component: change item
 interface ChangeItemProps {
   change: ResumeFieldDiff;
+  isUnverified?: boolean;
 }
 
-function ChangeItem({ change }: ChangeItemProps) {
+function ChangeItem({ change, isUnverified }: ChangeItemProps) {
   // Background tint + leading glyph instead of left-stripe borders.
   // Side-stripe borders are an impeccable absolute_ban (BAN 1) — the most
   // overused dashboard "design touch". The leading +/-/~ glyph carries the
@@ -461,6 +504,11 @@ function ChangeItem({ change }: ChangeItemProps) {
             <div className="text-ink-soft font-mono text-sm">{change.new_value}</div>
           )}
         </div>
+        {isUnverified && (
+          <span className="font-mono text-xs font-bold text-warning border border-warning px-1 shrink-0">
+            unverified
+          </span>
+        )}
         {change.change_type === 'added' && change.confidence === 'high' && (
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
         )}

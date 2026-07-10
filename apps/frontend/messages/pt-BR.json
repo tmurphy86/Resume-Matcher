@@ -588,6 +588,17 @@
       "timeout": "A solicitação expirou. Tente novamente com uma descrição de vaga mais curta ou verifique sua conexão.",
       "failedToPreview": "Não foi possível pré-visualizar o currículo. Verifique sua chave de API em Configurações e tente novamente.",
       "failedToConfirm": "Não foi possível aplicar as alterações. Tente novamente."
+    },
+    "provenance": {
+      "title": "Procedência",
+      "covered": "coberto",
+      "uncovered": "não coberto",
+      "broken": "quebrado",
+      "verifyGaps": "Verificar lacunas com o Modo Entrevista",
+      "unverifiedWarning": "{count} alterações sem suporte de fatos",
+      "noProvenance": "Sem dados de procedência",
+      "uncoveredItems": "Blocos não cobertos",
+      "brokenItems": "Citações incorretas"
     }
   },
   "settings": {

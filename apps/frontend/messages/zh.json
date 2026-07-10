@@ -588,6 +588,17 @@
       "timeout": "请求超时。请尝试使用更短的职位描述或检查网络连接后重试。",
       "failedToPreview": "无法预览简历。请在设置中检查 API 密钥后重试。",
       "failedToConfirm": "无法应用更改。请重试。"
+    },
+    "provenance": {
+      "title": "来源",
+      "covered": "已覆盖",
+      "uncovered": "未覆盖",
+      "broken": "已损坏",
+      "verifyGaps": "通过面试模式验证差距",
+      "unverifiedWarning": "{count} 条更改缺乏事实支持",
+      "noProvenance": "无来源数据",
+      "uncoveredItems": "未覆盖块",
+      "brokenItems": "引用错误"
     }
   },
   "settings": {

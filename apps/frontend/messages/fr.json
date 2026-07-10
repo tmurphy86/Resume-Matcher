@@ -588,6 +588,17 @@
       "timeout": "La requête a expiré. Veuillez réessayer avec une fiche de poste plus courte ou vérifiez votre connexion.",
       "failedToPreview": "Impossible de prévisualiser le CV. Vérifiez votre clé API dans les paramètres, puis réessayez.",
       "failedToConfirm": "Impossible d'appliquer les modifications. Veuillez réessayer."
+    },
+    "provenance": {
+      "title": "Provenance",
+      "covered": "couvert",
+      "uncovered": "non couvert",
+      "broken": "brisé",
+      "verifyGaps": "Vérifier les lacunes avec le Mode Entretien",
+      "unverifiedWarning": "{count} modifications sans données de faits",
+      "noProvenance": "Aucune donnée de provenance",
+      "uncoveredItems": "Blocs non couverts",
+      "brokenItems": "Citations incorrectes"
     }
   },
   "settings": {

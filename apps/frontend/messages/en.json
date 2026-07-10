@@ -588,6 +588,17 @@
       "timeout": "The request timed out. Please try again with a shorter job description or check your connection.",
       "failedToPreview": "Couldn't preview the resume. Check your API key in Settings, then try again.",
       "failedToConfirm": "Couldn't apply the changes. Please try again."
+    },
+    "provenance": {
+      "title": "Provenance",
+      "covered": "covered",
+      "uncovered": "uncovered",
+      "broken": "broken",
+      "verifyGaps": "Verify gaps with Interview Mode",
+      "unverifiedWarning": "{count} changes without fact support",
+      "noProvenance": "No provenance data",
+      "uncoveredItems": "Uncovered blocks",
+      "brokenItems": "Broken citations"
     }
   },
   "settings": {

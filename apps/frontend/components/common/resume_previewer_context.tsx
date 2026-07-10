@@ -59,6 +59,22 @@ export interface ATSScore {
   recommendations: string[];
 }
 
+export interface ProvenanceData {
+  covered: number;
+  uncovered: number;
+  broken: number;
+  uncovered_items?: Array<{ section: string; text: string }>;
+  broken_items?: Array<{ section: string; fact_id: string; text: string }>;
+}
+
+export interface UnverifiedChange {
+  path: string;
+  action: string;
+  value?: string;
+  reason?: string;
+  fact_ids: string[];
+}
+
 export interface ResumeDiffSummary {
   total_changes: number;
   skills_added: number;
@@ -136,6 +152,8 @@ export interface Data {
   diff_summary?: ResumeDiffSummary;
   detailed_changes?: ResumeFieldDiff[];
   ats_score?: ATSScore;
+  provenance?: ProvenanceData | null;
+  unverified?: UnverifiedChange[];
 }
 
 export interface ImprovedResult {

@@ -20,6 +20,7 @@ import { Loader2, ArrowLeft, AlertTriangle, Settings } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { DiffPreviewModal } from '@/components/tailor/diff-preview-modal';
 import { ATSScoreCard } from '@/components/tailor/ats-score-card';
+import { ProvenancePanel } from '@/components/tailor/provenance-panel';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function TailorPage() {
@@ -464,6 +465,17 @@ export default function TailorPage() {
         </div>
       )}
 
+      {/* Provenance Panel — shown once a preview result is available */}
+      {pendingResult?.data?.provenance && (
+        <div className="w-full max-w-4xl mt-4">
+          <ProvenancePanel
+            provenance={pendingResult.data.provenance}
+            unverifiedCount={pendingResult.data.unverified?.length ?? 0}
+            jobId={pendingResult.data.job_id}
+          />
+        </div>
+      )}
+
       {/* Diff preview modal */}
       {showDiffModal && pendingResult && (
         <DiffPreviewModal
@@ -475,6 +487,7 @@ export default function TailorPage() {
           diffSummary={pendingResult?.data?.diff_summary}
           detailedChanges={pendingResult?.data?.detailed_changes}
           errorMessage={diffConfirmError ?? undefined}
+          unverified={pendingResult?.data?.unverified}
         />
       )}
 

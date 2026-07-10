@@ -588,6 +588,17 @@
       "timeout": "La solicitud agotó el tiempo de espera. Inténtalo de nuevo con una descripción del trabajo más corta o comprueba tu conexión.",
       "failedToPreview": "No se pudo previsualizar el currículum. Revisa tu clave API en Configuración e inténtalo de nuevo.",
       "failedToConfirm": "No se pudieron aplicar los cambios. Inténtalo de nuevo."
+    },
+    "provenance": {
+      "title": "Procedencia",
+      "covered": "cubierto",
+      "uncovered": "no cubierto",
+      "broken": "roto",
+      "verifyGaps": "Verificar lagunas con el Modo Entrevista",
+      "unverifiedWarning": "{count} cambios sin respaldo de hechos",
+      "noProvenance": "Sin datos de procedencia",
+      "uncoveredItems": "Bloques no cubiertos",
+      "brokenItems": "Citas incorrectas"
     }
   },
   "settings": {
