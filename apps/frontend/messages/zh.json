@@ -601,6 +601,21 @@
       "brokenItems": "引用错误",
       "selectedGap": "选中的差距: {keyword}",
       "clearGap": "清除"
+    },
+    "variants": {
+      "title": "块变体",
+      "sections": "{count} 个部分",
+      "summarySection": "摘要",
+      "experienceSection": "{company} 的 {title}",
+      "active": "当前激活",
+      "switchTo": "切换到: {tags}",
+      "saveAsVariant": "保存为变体",
+      "tagLabel": "标签（可选）",
+      "tagPlaceholder": "例如：针对性、简洁",
+      "saveButton": "保存变体",
+      "saving": "正在保存...",
+      "saved": "已保存",
+      "errorSaving": "保存变体失败"
     }
   },
   "settings": {

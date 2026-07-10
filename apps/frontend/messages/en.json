@@ -601,6 +601,21 @@
       "brokenItems": "Broken citations",
       "selectedGap": "Selected gap: {keyword}",
       "clearGap": "Clear"
+    },
+    "variants": {
+      "title": "Block Variants",
+      "sections": "{count} sections",
+      "summarySection": "Summary",
+      "experienceSection": "{title} at {company}",
+      "active": "Active",
+      "switchTo": "Switch to: {tags}",
+      "saveAsVariant": "Save as variant",
+      "tagLabel": "Tags (optional)",
+      "tagPlaceholder": "e.g. targeted, concise",
+      "saveButton": "Save variant",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "errorSaving": "Failed to save variant"
     }
   },
   "settings": {

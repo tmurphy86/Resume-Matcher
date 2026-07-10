@@ -601,6 +601,21 @@
       "brokenItems": "Citas incorrectas",
       "selectedGap": "Brecha seleccionada: {keyword}",
       "clearGap": "Limpiar"
+    },
+    "variants": {
+      "title": "Variantes de bloque",
+      "sections": "{count} secciones",
+      "summarySection": "Resumen",
+      "experienceSection": "{title} en {company}",
+      "active": "Activo",
+      "switchTo": "Cambiar a: {tags}",
+      "saveAsVariant": "Guardar como variante",
+      "tagLabel": "Etiquetas (opcional)",
+      "tagPlaceholder": "ej. orientado, conciso",
+      "saveButton": "Guardar variante",
+      "saving": "Guardando...",
+      "saved": "Guardado",
+      "errorSaving": "Error al guardar la variante"
     }
   },
   "settings": {

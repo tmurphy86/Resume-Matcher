@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, CheckCircle, X, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  BookmarkPlus,
+  Check,
+  CheckCircle,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTranslations } from '@/lib/i18n';
@@ -21,6 +30,8 @@ interface DiffPreviewModalProps {
   detailedChanges?: ResumeFieldDiff[];
   errorMessage?: string;
   unverified?: UnverifiedChange[];
+  /** When provided, enables "Save as variant" buttons on description/summary changes. */
+  onSaveAsVariant?: (change: ResumeFieldDiff, tags: string[]) => Promise<void>;
 }
 
 export function DiffPreviewModal({
@@ -33,6 +44,7 @@ export function DiffPreviewModal({
   detailedChanges,
   errorMessage,
   unverified,
+  onSaveAsVariant,
 }: DiffPreviewModalProps) {
   const { t } = useTranslations();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -220,6 +232,9 @@ export function DiffPreviewModal({
                   key={idx}
                   change={change}
                   isUnverified={unverifiedPaths.has(change.field_path)}
+                  onSaveAsVariant={
+                    onSaveAsVariant ? (tags) => onSaveAsVariant(change, tags) : undefined
+                  }
                 />
               ))}
             </ChangeSection>
@@ -274,6 +289,9 @@ export function DiffPreviewModal({
                   key={idx}
                   change={change}
                   isUnverified={unverifiedPaths.has(change.field_path)}
+                  onSaveAsVariant={
+                    onSaveAsVariant ? (tags) => onSaveAsVariant(change, tags) : undefined
+                  }
                 />
               ))}
             </ChangeSection>
@@ -460,9 +478,18 @@ function ChangeSection({ title, count, isExpanded, onToggle, children }: ChangeS
 interface ChangeItemProps {
   change: ResumeFieldDiff;
   isUnverified?: boolean;
+  /** When provided, shows a "Save as variant" button (description/summary only). */
+  onSaveAsVariant?: (tags: string[]) => Promise<void>;
 }
 
-function ChangeItem({ change, isUnverified }: ChangeItemProps) {
+function ChangeItem({ change, isUnverified, onSaveAsVariant }: ChangeItemProps) {
+  const { t } = useTranslations();
+  const [showSavePanel, setShowSavePanel] = useState(false);
+  const [tags, setTags] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   // Background tint + leading glyph instead of left-stripe borders.
   // Side-stripe borders are an impeccable absolute_ban (BAN 1) — the most
   // overused dashboard "design touch". The leading +/-/~ glyph carries the
@@ -483,6 +510,32 @@ function ChangeItem({ change, isUnverified }: ChangeItemProps) {
     added: '+',
     removed: '-',
     modified: '~',
+  };
+
+  // "Save as variant" is relevant for description and summary changes that have new text.
+  const canSaveAsVariant =
+    onSaveAsVariant &&
+    change.new_value &&
+    (change.field_type === 'description' || change.field_type === 'summary');
+
+  const handleSaveVariant = async () => {
+    if (!onSaveAsVariant || !change.new_value) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const tagList = tags
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await onSaveAsVariant(tagList);
+      setSavedOk(true);
+      setShowSavePanel(false);
+      setTags('');
+    } catch {
+      setSaveError(t('tailor.variants.errorSaving'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -512,7 +565,68 @@ function ChangeItem({ change, isUnverified }: ChangeItemProps) {
         {change.change_type === 'added' && change.confidence === 'high' && (
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
         )}
+        {canSaveAsVariant && !savedOk && (
+          <button
+            onClick={() => setShowSavePanel((v) => !v)}
+            className="font-mono text-xs text-primary hover:text-primary/80 flex items-center gap-1 shrink-0 transition-colors"
+            aria-label={t('tailor.variants.saveAsVariant')}
+            title={t('tailor.variants.saveAsVariant')}
+          >
+            <BookmarkPlus className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {savedOk && (
+          <span className="font-mono text-xs text-success flex items-center gap-1 shrink-0">
+            <Check className="w-3.5 h-3.5" />
+            {t('tailor.variants.saved')}
+          </span>
+        )}
       </div>
+
+      {/* Inline save-as-variant panel */}
+      {showSavePanel && canSaveAsVariant && (
+        <div className="mt-2 pt-2 border-t border-black flex items-center gap-2">
+          <input
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder={t('tailor.variants.tagPlaceholder')}
+            className="flex-1 font-mono text-xs border border-black px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
+            aria-label={t('tailor.variants.tagLabel')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.stopPropagation();
+                void handleSaveVariant();
+              }
+            }}
+          />
+          <button
+            onClick={() => void handleSaveVariant()}
+            disabled={isSaving}
+            className="font-mono text-xs border border-black bg-black text-white px-2 py-1 hover:bg-ink-soft disabled:opacity-50 shrink-0 flex items-center gap-1"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {t('tailor.variants.saving')}
+              </>
+            ) : (
+              t('tailor.variants.saveButton')
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setShowSavePanel(false);
+              setTags('');
+              setSaveError(null);
+            }}
+            className="font-mono text-xs text-ink-soft hover:text-ink shrink-0"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {saveError && <p className="mt-1 font-mono text-xs text-destructive">{saveError}</p>}
     </div>
   );
 }

@@ -28,6 +28,20 @@ export interface PersonalInfo {
   github?: string;
 }
 
+// Variant/Block Layer types (mirrors backend BlockVariant + BulletBlock in schemas/models.py)
+export interface BlockVariant {
+  id: string;
+  text: string;
+  tags: string[];
+  fact_ids: string[];
+}
+
+export interface BulletBlock {
+  id: string;
+  active_variant_id: string;
+  variants: BlockVariant[];
+}
+
 export interface Experience {
   id: number;
   title?: string;
@@ -35,6 +49,8 @@ export interface Experience {
   location?: string;
   years?: string;
   description?: string[];
+  /** Block-variant layer — present only on structured resumes (ADR-002). */
+  bullet_blocks?: BulletBlock[];
 }
 
 export interface Education {
@@ -127,6 +143,8 @@ export interface ResumeData {
   // NEW: Section metadata and custom sections
   sectionMeta?: SectionMeta[];
   customSections?: Record<string, CustomSection>;
+  /** Block-variant layer for the summary (ADR-002). */
+  summary_blocks?: BulletBlock[];
 }
 
 interface ResumeProps {

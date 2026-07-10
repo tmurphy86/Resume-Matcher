@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,11 @@ import {
   uploadJobDescriptions,
   previewImproveResume,
   confirmImproveResume,
+  fetchResume,
+  updateResume,
+  type ProcessedResume,
+  type BlockVariant,
+  type BulletBlock,
 } from '@/lib/api/resume';
 import { fetchPromptConfig, type PromptOption } from '@/lib/api/config';
 import { Dropdown } from '@/components/ui/dropdown';
@@ -21,7 +26,102 @@ import { useTranslations } from '@/lib/i18n';
 import { DiffPreviewModal } from '@/components/tailor/diff-preview-modal';
 import { ATSScoreCard } from '@/components/tailor/ats-score-card';
 import { ProvenancePanel } from '@/components/tailor/provenance-panel';
+import { BlockVariantEditor, type BlockSection } from '@/components/tailor/block-variant-editor';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { ResumeFieldDiff } from '@/components/common/resume_previewer_context';
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers for block-variant management
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Returns a deep copy of `data` with the `active_variant_id` of the specified
+ * block updated.  Searches both `summary_blocks` and `workExperience[*].bullet_blocks`.
+ */
+function switchBlockVariant(
+  data: ProcessedResume,
+  blockId: string,
+  variantId: string
+): ProcessedResume {
+  const updated: ProcessedResume = {
+    ...data,
+    summary_blocks: data.summary_blocks?.map((b) =>
+      b.id === blockId ? { ...b, active_variant_id: variantId } : b
+    ),
+    workExperience: data.workExperience?.map((exp) => ({
+      ...exp,
+      bullet_blocks: exp.bullet_blocks?.map((b) =>
+        b.id === blockId ? { ...b, active_variant_id: variantId } : b
+      ),
+    })),
+  };
+  return updated;
+}
+
+/**
+ * Returns a deep copy of `data` with a new `BlockVariant` inserted into the
+ * appropriate block.  For summary changes, targets `summary_blocks[0]`.  For
+ * description changes, parses the field_path pattern
+ * `workExperience[N].description[M]` and targets `workExperience[N].bullet_blocks[M]`.
+ * If no matching block exists, a new one is created.
+ */
+function addVariantToResumeData(
+  data: ProcessedResume,
+  fieldType: string,
+  fieldPath: string,
+  variant: BlockVariant,
+  newBlockId: string
+): ProcessedResume {
+  const updated: ProcessedResume = {
+    ...data,
+    summary_blocks: data.summary_blocks ? [...data.summary_blocks] : [],
+    workExperience: data.workExperience ? data.workExperience.map((e) => ({ ...e })) : [],
+  };
+
+  if (fieldType === 'summary') {
+    const blocks = updated.summary_blocks!;
+    if (blocks.length === 0) {
+      blocks.push({ id: newBlockId, active_variant_id: variant.id, variants: [variant] });
+    } else {
+      const block = { ...blocks[0], variants: [...blocks[0].variants] };
+      if (!block.variants.some((v) => v.id === variant.id)) {
+        block.variants.push(variant);
+      }
+      blocks[0] = block;
+    }
+    return updated;
+  }
+
+  if (fieldType === 'description') {
+    const match = fieldPath.match(/workExperience\[(\d+)\](?:\.description\[(\d+)\])?/);
+    if (match && updated.workExperience) {
+      const expIdx = parseInt(match[1], 10);
+      const descIdx = match[2] !== undefined ? parseInt(match[2], 10) : 0;
+      const exp = updated.workExperience[expIdx];
+      if (exp) {
+        const blocks: BulletBlock[] = exp.bullet_blocks ? [...exp.bullet_blocks] : [];
+        const existingBlock = blocks[descIdx];
+        if (existingBlock) {
+          const block: BulletBlock = { ...existingBlock, variants: [...existingBlock.variants] };
+          if (!block.variants.some((v) => v.id === variant.id)) {
+            block.variants.push(variant);
+          }
+          blocks[descIdx] = block;
+        } else {
+          blocks.push({ id: newBlockId, active_variant_id: variant.id, variants: [variant] });
+        }
+        updated.workExperience[expIdx] = { ...exp, bullet_blocks: blocks };
+      }
+    }
+    return updated;
+  }
+
+  return updated;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────────
 
 export default function TailorPage() {
   const { t } = useTranslations();
@@ -34,6 +134,9 @@ export default function TailorPage() {
   const [promptLoading, setPromptLoading] = useState(false);
   const hasUserSelectedPrompt = useRef(false);
   const missingDiffConfirmInFlight = useRef(false);
+
+  // Master resume data (for block variant editor)
+  const [masterResumeData, setMasterResumeData] = useState<ProcessedResume | null>(null);
 
   // Diff preview modal state
   const [showDiffModal, setShowDiffModal] = useState(false);
@@ -92,6 +195,26 @@ export default function TailorPage() {
     }
   }, [router]);
 
+  // Load master resume data to power the block variant editor
+  useEffect(() => {
+    if (!masterResumeId) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await fetchResume(masterResumeId);
+        if (!cancelled && data.processed_resume) {
+          setMasterResumeData(data.processed_resume as ProcessedResume);
+        }
+      } catch (err) {
+        console.error('Failed to load master resume for variant editor', err);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [masterResumeId]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -123,6 +246,84 @@ export default function TailorPage() {
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') e.stopPropagation();
   };
+
+  // ── Block variant editor ──────────────────────────────────────
+
+  /** Derive BlockSection[] from the loaded master resume data. */
+  const blockSections = useMemo<BlockSection[]>(() => {
+    if (!masterResumeData || !masterResumeId) return [];
+    const sections: BlockSection[] = [];
+
+    if (masterResumeData.summary_blocks && masterResumeData.summary_blocks.length > 0) {
+      sections.push({
+        id: 'summary',
+        label: t('tailor.variants.summarySection'),
+        blocks: masterResumeData.summary_blocks,
+        onSwitchVariant: async (blockId: string, variantId: string) => {
+          const updated = switchBlockVariant(masterResumeData, blockId, variantId);
+          setMasterResumeData(updated);
+          await updateResume(masterResumeId, updated as Parameters<typeof updateResume>[1]);
+        },
+      });
+    }
+
+    masterResumeData.workExperience?.forEach((exp, idx) => {
+      if (exp.bullet_blocks && exp.bullet_blocks.length > 0) {
+        const label =
+          exp.title && exp.company
+            ? t('tailor.variants.experienceSection', {
+                title: exp.title,
+                company: exp.company,
+              })
+            : (exp.title ?? exp.company ?? `Experience ${idx + 1}`);
+        sections.push({
+          id: `exp-${idx}`,
+          label,
+          blocks: exp.bullet_blocks,
+          onSwitchVariant: async (blockId: string, variantId: string) => {
+            const updated = switchBlockVariant(masterResumeData, blockId, variantId);
+            setMasterResumeData(updated);
+            await updateResume(masterResumeId, updated as Parameters<typeof updateResume>[1]);
+          },
+        });
+      }
+    });
+
+    return sections;
+  }, [masterResumeData, masterResumeId, t]);
+
+  /** Handle "Save as variant" from the diff modal. */
+  const handleSaveAsVariant = useCallback(
+    async (change: ResumeFieldDiff, tags: string[]) => {
+      if (!masterResumeId) return;
+
+      // Collect fact_ids from unverified changes that match this field_path
+      const factIds = (pendingResult?.data?.unverified ?? [])
+        .filter((u) => u.path === change.field_path)
+        .flatMap((u) => u.fact_ids);
+
+      const newVariantId = crypto.randomUUID();
+      const newBlockId = crypto.randomUUID();
+      const newVariant: BlockVariant = {
+        id: newVariantId,
+        text: change.new_value ?? '',
+        tags,
+        fact_ids: factIds,
+      };
+
+      const base = masterResumeData ?? {};
+      const updated = addVariantToResumeData(
+        base,
+        change.field_type,
+        change.field_path,
+        newVariant,
+        newBlockId
+      );
+      setMasterResumeData(updated);
+      await updateResume(masterResumeId, updated as Parameters<typeof updateResume>[1]);
+    },
+    [masterResumeId, masterResumeData, pendingResult]
+  );
 
   const buildConfirmPayload = (result: ImprovedResult) => {
     if (!masterResumeId) {
@@ -461,6 +662,13 @@ export default function TailorPage() {
         </div>
       </div>
 
+      {/* Block Variant Editor — shown when master resume has block variants */}
+      {blockSections.length > 0 && (
+        <div className="w-full max-w-4xl mt-6">
+          <BlockVariantEditor sections={blockSections} />
+        </div>
+      )}
+
       {/* ATS Score Breakdown — shown once a preview result is available */}
       {pendingResult?.data?.ats_score && (
         <div className="w-full max-w-4xl mt-6">
@@ -496,6 +704,7 @@ export default function TailorPage() {
           detailedChanges={pendingResult?.data?.detailed_changes}
           errorMessage={diffConfirmError ?? undefined}
           unverified={pendingResult?.data?.unverified}
+          onSaveAsVariant={handleSaveAsVariant}
         />
       )}
 

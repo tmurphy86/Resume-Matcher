@@ -601,6 +601,21 @@
       "brokenItems": "壊れた引用",
       "selectedGap": "選択されたギャップ: {keyword}",
       "clearGap": "クリア"
+    },
+    "variants": {
+      "title": "ブロックバリアント",
+      "sections": "{count} セクション",
+      "summarySection": "サマリー",
+      "experienceSection": "{company} の {title}",
+      "active": "アクティブ",
+      "switchTo": "切り替え: {tags}",
+      "saveAsVariant": "バリアントとして保存",
+      "tagLabel": "タグ（任意）",
+      "tagPlaceholder": "例: ターゲット向け, 簡潔",
+      "saveButton": "バリアントを保存",
+      "saving": "保存中...",
+      "saved": "保存済み",
+      "errorSaving": "バリアントの保存に失敗しました"
     }
   },
   "settings": {

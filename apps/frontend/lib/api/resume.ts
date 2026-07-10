@@ -2,13 +2,19 @@ import type {
   ImprovedResult,
   InterviewPrepData,
 } from '@/components/common/resume_previewer_context';
-import type { ResumeData } from '@/components/dashboard/resume-component';
+import type {
+  ResumeData,
+  BlockVariant,
+  BulletBlock,
+} from '@/components/dashboard/resume-component';
+
+export type { BlockVariant, BulletBlock };
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
 import { API_BASE, DEFAULT_TIMEOUT_MS, apiPost, apiPatch, apiDelete, apiFetch } from './client';
 
-// Matches backend schemas/models.py ResumeData
-interface ProcessedResume {
+// Matches backend schemas/models.py ResumeData (including variant/block layer ADR-002)
+export interface ProcessedResume {
   personalInfo?: {
     name?: string;
     title?: string;
@@ -20,6 +26,8 @@ interface ProcessedResume {
     github?: string | null;
   };
   summary?: string;
+  /** Block-variant layer for the summary section (ADR-002). */
+  summary_blocks?: BulletBlock[];
   workExperience?: Array<{
     id: number;
     title?: string;
@@ -27,6 +35,8 @@ interface ProcessedResume {
     location?: string | null;
     years?: string;
     description?: string[];
+    /** Block-variant layer per bullet (ADR-002). */
+    bullet_blocks?: BulletBlock[];
   }>;
   education?: Array<{
     id: number;
