@@ -177,6 +177,35 @@ Rules:
 Resume to parse:
 {resume_text}"""
 
+JD_PARSE_PROMPT = """Parse this job description into structured JSON. Output ONLY the JSON object, no other text.
+
+Respond in {output_language}.
+
+Example format:
+{{
+  "responsibilities": [
+    "Design and implement scalable backend services",
+    "Collaborate with cross-functional teams"
+  ],
+  "requirements": [
+    "5+ years of Python experience",
+    "Experience with cloud platforms (AWS, GCP, or Azure)"
+  ],
+  "level": "Senior",
+  "comp": "$150,000 - $180,000"
+}}
+
+Rules:
+- "responsibilities": list of strings describing what the candidate will do; extract from duties/responsibilities sections
+- "requirements": list of strings describing what qualifications are needed; extract from requirements/qualifications sections
+- "level": seniority level as a short string (e.g., "Junior", "Mid", "Senior", "Staff", "Principal", "Manager"); null if not determinable
+- "comp": compensation as stated in the posting (e.g., "$120k - $150k", "€80,000"); null if not mentioned
+- Use empty lists [] for responsibilities or requirements if not found; do NOT use null for lists
+- Keep each item concise — one responsibility or requirement per string
+
+Job description:
+{job_description}"""
+
 EXTRACT_KEYWORDS_PROMPT = """Extract job requirements as JSON. Output ONLY the JSON object, no other text.
 
 Example format:

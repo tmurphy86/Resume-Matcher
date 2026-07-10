@@ -1,9 +1,14 @@
 """Job description management endpoints."""
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.database import db
 from app.schemas import JobUploadRequest, JobUploadResponse
+from app.services.jd_parser import backfill_parse_jobs, parse_job_description
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -14,6 +19,8 @@ async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadRespons
 
     Stores the raw text for later use in resume tailoring.
     Returns an array of job_ids corresponding to the input array.
+    Triggers structured JD parsing for each uploaded job (best-effort;
+    parse failures are logged but never block the upload response).
     """
     if not request.job_descriptions:
         raise HTTPException(status_code=400, detail="No job descriptions provided")
@@ -29,6 +36,10 @@ async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadRespons
         )
         job_ids.append(job["job_id"])
 
+        # Best-effort parse — errors are logged inside parse_job_description,
+        # never raised here so the upload always succeeds.
+        await parse_job_description(job["job_id"], jd.strip())
+
     return JobUploadResponse(
         message="data successfully processed",
         job_id=job_ids,
@@ -37,6 +48,24 @@ async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadRespons
             "resume_id": request.resume_id,
         },
     )
+
+
+@router.post("/backfill-parse")
+async def backfill_parse() -> dict:
+    """Parse all jobs that do not yet have structured parsed data.
+
+    Idempotent — jobs that already have ``parsed`` in their metadata are
+    skipped.  Runs synchronously in the request; for very large job tables
+    this may take a while.
+
+    Returns a summary with counts: total, skipped, parsed, failed.
+    """
+    try:
+        summary = await backfill_parse_jobs()
+    except Exception as exc:
+        logger.error(f"Backfill parse failed: {exc}")
+        raise HTTPException(status_code=500, detail="Backfill parse failed. Please try again.")
+    return summary
 
 
 @router.get("/{job_id}")

@@ -447,6 +447,13 @@ class Database:
             await session.commit()
             return self._job_to_dict(row)
 
+    async def list_jobs(self) -> list[dict[str, Any]]:
+        """Return all job records ordered by creation date (newest first)."""
+        async with self._session() as session:
+            result = await session.execute(select(Job).order_by(Job.created_at.desc()))
+            rows = result.scalars().all()
+            return [self._job_to_dict(row) for row in rows]
+
     async def delete_job(self, job_id: str) -> bool:
         """Delete a job by ID (used to clean up an orphaned manual-add job)."""
         async with self._session() as session:
