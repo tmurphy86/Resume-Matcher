@@ -46,7 +46,8 @@
     "backToDashboard": "Voltar ao Painel",
     "goToSettings": "Ir para Configurações",
     "applicationTracker": "Acompanhamento de candidaturas",
-    "facts": "Biblioteca de fatos"
+    "facts": "Biblioteca de fatos",
+    "careerIntelligence": "Inteligência de carreira"
   },
   "dashboard": {
     "title": "Painel",
@@ -1118,6 +1119,53 @@
       "projectFollowUps": "Perguntas sobre projetos",
       "skillGaps": "Lacunas de habilidades",
       "talkingPoints": "Pontos de conversa"
+    }
+  },
+  "career": {
+    "title": "Inteligência de carreira",
+    "subtitle": "Agrupamento de arquétipos, análise atração×ajuste e conselhos estratégicos.",
+    "clusterButton": "Agrupar arquétipos",
+    "clustering": "Agrupando...",
+    "generateButton": "Gerar relatório",
+    "generating": "Gerando...",
+    "empty": "Nenhum relatório de carreira ainda. Clique em \"Agrupar arquétipos\" para analisar suas descrições de vagas salvas.",
+    "noReport": "Pontuações ainda não geradas. Clique em \"Gerar relatório\" para calcular atração, ajuste e conselhos estratégicos.",
+    "history": {
+      "title": "Histórico de relatórios",
+      "archetypes": "arquétipos",
+      "scored": "pontuado",
+      "notScored": "não pontuado"
+    },
+    "quadrant": {
+      "title": "Atração × Ajuste",
+      "yAxis": "Atração",
+      "xAxis": "Ajuste →",
+      "target": "Alvo",
+      "targetDesc": "Alta atração / Alto ajuste",
+      "stretch": "Desafio",
+      "stretchDesc": "Alta atração / Baixo ajuste",
+      "signal": "Sinal de mercado",
+      "signalDesc": "Baixa atração / Alto ajuste",
+      "deprioritize": "Despriorizar",
+      "deprioritizeDesc": "Baixa atração / Baixo ajuste"
+    },
+    "archetypes": {
+      "title": "Arquétipos",
+      "noScoresYet": "Gere um relatório para ver as pontuações"
+    },
+    "card": {
+      "attraction": "Atração",
+      "fit": "Ajuste",
+      "gaps": "Principais lacunas",
+      "jdCount": "vagas"
+    },
+    "advice": {
+      "title": "Conselhos estratégicos"
+    },
+    "errors": {
+      "loadFailed": "Falha ao carregar relatórios de carreira.",
+      "clusterFailed": "O agrupamento falhou. Verifique se você tem descrições de vagas salvas.",
+      "generateFailed": "A geração do relatório falhou. Por favor, tente novamente."
     }
   }
 }

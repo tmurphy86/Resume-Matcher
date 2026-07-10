@@ -46,7 +46,8 @@
     "backToDashboard": "ダッシュボードに戻る",
     "goToSettings": "設定へ",
     "applicationTracker": "応募トラッカー",
-    "facts": "ファクトライブラリ"
+    "facts": "ファクトライブラリ",
+    "careerIntelligence": "キャリアインテリジェンス"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1118,6 +1119,53 @@
       "projectFollowUps": "プロジェクト深掘り質問",
       "skillGaps": "スキルギャップ",
       "talkingPoints": "話すべき要点"
+    }
+  },
+  "career": {
+    "title": "キャリアインテリジェンス",
+    "subtitle": "アーキタイプのクラスタリング、魅力度×適合度分析、戦略的アドバイス。",
+    "clusterButton": "アーキタイプをクラスタリング",
+    "clustering": "クラスタリング中...",
+    "generateButton": "レポートを生成",
+    "generating": "生成中...",
+    "empty": "キャリアレポートがまだありません。「アーキタイプをクラスタリング」をクリックして保存済みの求人票を分析してください。",
+    "noReport": "スコアはまだ生成されていません。「レポートを生成」をクリックして魅力度、適合度、戦略的アドバイスを計算してください。",
+    "history": {
+      "title": "レポート履歴",
+      "archetypes": "アーキタイプ",
+      "scored": "スコア済み",
+      "notScored": "未スコア"
+    },
+    "quadrant": {
+      "title": "魅力度 × 適合度",
+      "yAxis": "魅力度",
+      "xAxis": "適合度 →",
+      "target": "ターゲット",
+      "targetDesc": "高魅力度 / 高適合度",
+      "stretch": "ストレッチ",
+      "stretchDesc": "高魅力度 / 低適合度",
+      "signal": "市場シグナル",
+      "signalDesc": "低魅力度 / 高適合度",
+      "deprioritize": "優先度を下げる",
+      "deprioritizeDesc": "低魅力度 / 低適合度"
+    },
+    "archetypes": {
+      "title": "アーキタイプ",
+      "noScoresYet": "スコアを見るにはレポートを生成してください"
+    },
+    "card": {
+      "attraction": "魅力度",
+      "fit": "適合度",
+      "gaps": "主要なギャップ",
+      "jdCount": "件"
+    },
+    "advice": {
+      "title": "戦略的アドバイス"
+    },
+    "errors": {
+      "loadFailed": "キャリアレポートの読み込みに失敗しました。",
+      "clusterFailed": "クラスタリングに失敗しました。求人票が保存されているか確認してください。",
+      "generateFailed": "レポートの生成に失敗しました。もう一度お試しください。"
     }
   }
 }

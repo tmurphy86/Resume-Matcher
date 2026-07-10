@@ -46,7 +46,8 @@
     "backToDashboard": "返回仪表板",
     "goToSettings": "前往设置",
     "applicationTracker": "申请追踪",
-    "facts": "事实库"
+    "facts": "事实库",
+    "careerIntelligence": "职业智能"
   },
   "dashboard": {
     "title": "仪表板",
@@ -1118,6 +1119,53 @@
       "projectFollowUps": "项目追问",
       "skillGaps": "技能差距",
       "talkingPoints": "沟通要点"
+    }
+  },
+  "career": {
+    "title": "职业智能",
+    "subtitle": "原型聚类、吸引力×匹配度分析及战略建议。",
+    "clusterButton": "聚类原型",
+    "clustering": "聚类中...",
+    "generateButton": "生成报告",
+    "generating": "生成中...",
+    "empty": "暂无职业报告。点击「聚类原型」分析您保存的职位描述。",
+    "noReport": "尚未生成评分。点击「生成报告」计算吸引力、匹配度和战略建议。",
+    "history": {
+      "title": "报告历史",
+      "archetypes": "个原型",
+      "scored": "已评分",
+      "notScored": "未评分"
+    },
+    "quadrant": {
+      "title": "吸引力 × 匹配度",
+      "yAxis": "吸引力",
+      "xAxis": "匹配度 →",
+      "target": "目标",
+      "targetDesc": "高吸引力 / 高匹配度",
+      "stretch": "挑战",
+      "stretchDesc": "高吸引力 / 低匹配度",
+      "signal": "市场信号",
+      "signalDesc": "低吸引力 / 高匹配度",
+      "deprioritize": "降低优先级",
+      "deprioritizeDesc": "低吸引力 / 低匹配度"
+    },
+    "archetypes": {
+      "title": "原型",
+      "noScoresYet": "运行生成报告以查看评分"
+    },
+    "card": {
+      "attraction": "吸引力",
+      "fit": "匹配度",
+      "gaps": "主要差距",
+      "jdCount": "职位"
+    },
+    "advice": {
+      "title": "战略建议"
+    },
+    "errors": {
+      "loadFailed": "加载职业报告失败。",
+      "clusterFailed": "聚类失败。请确保您已保存职位描述。",
+      "generateFailed": "报告生成失败。请重试。"
     }
   }
 }

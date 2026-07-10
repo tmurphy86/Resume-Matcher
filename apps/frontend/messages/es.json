@@ -46,7 +46,8 @@
     "backToDashboard": "Volver al Panel",
     "goToSettings": "Ir a Configuración",
     "applicationTracker": "Seguimiento de candidaturas",
-    "facts": "Biblioteca de hechos"
+    "facts": "Biblioteca de hechos",
+    "careerIntelligence": "Inteligencia de carrera"
   },
   "dashboard": {
     "title": "Panel",
@@ -1118,6 +1119,53 @@
       "projectFollowUps": "Seguimiento de proyectos",
       "skillGaps": "Brechas de habilidades",
       "talkingPoints": "Puntos clave"
+    }
+  },
+  "career": {
+    "title": "Inteligencia de carrera",
+    "subtitle": "Agrupación de arquetipos, análisis atracción×ajuste y consejos estratégicos.",
+    "clusterButton": "Agrupar arquetipos",
+    "clustering": "Agrupando...",
+    "generateButton": "Generar informe",
+    "generating": "Generando...",
+    "empty": "Aún no hay informes de carrera. Haz clic en \"Agrupar arquetipos\" para analizar tus descripciones de trabajo guardadas.",
+    "noReport": "Puntuaciones no generadas aún. Haz clic en \"Generar informe\" para calcular atracción, ajuste y consejos estratégicos.",
+    "history": {
+      "title": "Historial de informes",
+      "archetypes": "arquetipos",
+      "scored": "puntuado",
+      "notScored": "sin puntuar"
+    },
+    "quadrant": {
+      "title": "Atracción × Ajuste",
+      "yAxis": "Atracción",
+      "xAxis": "Ajuste →",
+      "target": "Objetivo",
+      "targetDesc": "Alta atracción / Alto ajuste",
+      "stretch": "Estiramiento",
+      "stretchDesc": "Alta atracción / Bajo ajuste",
+      "signal": "Señal de mercado",
+      "signalDesc": "Baja atracción / Alto ajuste",
+      "deprioritize": "Despriorizar",
+      "deprioritizeDesc": "Baja atracción / Bajo ajuste"
+    },
+    "archetypes": {
+      "title": "Arquetipos",
+      "noScoresYet": "Genera un informe para ver las puntuaciones"
+    },
+    "card": {
+      "attraction": "Atracción",
+      "fit": "Ajuste",
+      "gaps": "Principales brechas",
+      "jdCount": "JDs"
+    },
+    "advice": {
+      "title": "Consejos estratégicos"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los informes de carrera.",
+      "clusterFailed": "La agrupación falló. Asegúrate de tener descripciones de trabajo guardadas.",
+      "generateFailed": "La generación del informe falló. Por favor, inténtalo de nuevo."
     }
   }
 }

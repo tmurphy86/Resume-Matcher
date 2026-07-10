@@ -46,7 +46,8 @@
     "backToDashboard": "Back to Dashboard",
     "goToSettings": "Go to Settings",
     "applicationTracker": "Application Tracker",
-    "facts": "Facts Library"
+    "facts": "Facts Library",
+    "careerIntelligence": "Career Intelligence"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1118,6 +1119,53 @@
       "projectFollowUps": "Project Follow-Ups",
       "skillGaps": "Skill Gaps",
       "talkingPoints": "Talking Points"
+    }
+  },
+  "career": {
+    "title": "Career Intelligence",
+    "subtitle": "Archetype clustering, attraction×fit analysis, and strategic advice.",
+    "clusterButton": "Cluster Archetypes",
+    "clustering": "Clustering...",
+    "generateButton": "Generate Report",
+    "generating": "Generating...",
+    "empty": "No career reports yet. Click \"Cluster Archetypes\" to analyse your saved job descriptions.",
+    "noReport": "Scores not yet generated. Click \"Generate Report\" to compute attraction, fit, and strategic advice.",
+    "history": {
+      "title": "Report History",
+      "archetypes": "archetypes",
+      "scored": "scored",
+      "notScored": "not scored"
+    },
+    "quadrant": {
+      "title": "Attraction × Fit",
+      "yAxis": "Attraction",
+      "xAxis": "Fit →",
+      "target": "Target",
+      "targetDesc": "High attract / High fit",
+      "stretch": "Stretch",
+      "stretchDesc": "High attract / Low fit",
+      "signal": "Market Signal",
+      "signalDesc": "Low attract / High fit",
+      "deprioritize": "Deprioritize",
+      "deprioritizeDesc": "Low attract / Low fit"
+    },
+    "archetypes": {
+      "title": "Archetypes",
+      "noScoresYet": "Run Generate Report for scores"
+    },
+    "card": {
+      "attraction": "Attraction",
+      "fit": "Fit",
+      "gaps": "Top Gaps",
+      "jdCount": "JDs"
+    },
+    "advice": {
+      "title": "Strategic Advice"
+    },
+    "errors": {
+      "loadFailed": "Failed to load career reports.",
+      "clusterFailed": "Clustering failed. Ensure you have saved job descriptions.",
+      "generateFailed": "Report generation failed. Please try again."
     }
   }
 }

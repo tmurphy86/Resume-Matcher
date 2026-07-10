@@ -46,7 +46,8 @@
     "backToDashboard": "Retour au tableau de bord",
     "goToSettings": "Accéder aux paramètres",
     "applicationTracker": "Suivi des candidatures",
-    "facts": "Bibliothèque de faits"
+    "facts": "Bibliothèque de faits",
+    "careerIntelligence": "Intelligence de carrière"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1118,6 +1119,53 @@
       "existingFact": "Existant : ",
       "confirmImport": "Ajouter les nouveaux faits",
       "noResumes": "Aucun autre CV disponible"
+    }
+  },
+  "career": {
+    "title": "Intelligence de carrière",
+    "subtitle": "Regroupement d'archétypes, analyse attraction×adéquation et conseils stratégiques.",
+    "clusterButton": "Regrouper les archétypes",
+    "clustering": "Regroupement...",
+    "generateButton": "Générer le rapport",
+    "generating": "Génération...",
+    "empty": "Aucun rapport de carrière pour l'instant. Cliquez sur \"Regrouper les archétypes\" pour analyser vos offres d'emploi sauvegardées.",
+    "noReport": "Scores pas encore générés. Cliquez sur \"Générer le rapport\" pour calculer l'attraction, l'adéquation et les conseils stratégiques.",
+    "history": {
+      "title": "Historique des rapports",
+      "archetypes": "archétypes",
+      "scored": "scoré",
+      "notScored": "non scoré"
+    },
+    "quadrant": {
+      "title": "Attraction × Adéquation",
+      "yAxis": "Attraction",
+      "xAxis": "Adéquation →",
+      "target": "Cible",
+      "targetDesc": "Haute attraction / Haute adéquation",
+      "stretch": "Étirement",
+      "stretchDesc": "Haute attraction / Faible adéquation",
+      "signal": "Signal de marché",
+      "signalDesc": "Faible attraction / Haute adéquation",
+      "deprioritize": "Déprioriser",
+      "deprioritizeDesc": "Faible attraction / Faible adéquation"
+    },
+    "archetypes": {
+      "title": "Archétypes",
+      "noScoresYet": "Générez un rapport pour voir les scores"
+    },
+    "card": {
+      "attraction": "Attraction",
+      "fit": "Adéquation",
+      "gaps": "Principaux écarts",
+      "jdCount": "offres"
+    },
+    "advice": {
+      "title": "Conseils stratégiques"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des rapports de carrière.",
+      "clusterFailed": "Le regroupement a échoué. Assurez-vous d'avoir des offres d'emploi sauvegardées.",
+      "generateFailed": "La génération du rapport a échoué. Veuillez réessayer."
     }
   }
 }
