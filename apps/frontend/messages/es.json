@@ -1071,6 +1071,17 @@
       "extractFailed": "Extracción fallida. Por favor, inténtalo de nuevo.",
       "saveFailed": "Error al guardar el hecho.",
       "deleteFailed": "Error al eliminar el hecho."
+    },
+    "importModal": {
+      "title": "Importar currículum antiguo",
+      "selectResume": "Selecciona un currículum para importar",
+      "importing": "Importar",
+      "groupNew": "Nuevo",
+      "groupDuplicate": "Casi duplicado",
+      "groupVariant": "Variante de redacción",
+      "existingFact": "Existente: ",
+      "confirmImport": "Agregar nuevos hechos",
+      "noResumes": "No hay otros currículos disponibles"
     }
   },
   "interviewPrep": {

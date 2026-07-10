@@ -106,6 +106,22 @@ async def confirm_facts_endpoint(
     return responses
 
 
+@router.post("/import-resume", response_model=list[dict], status_code=200)
+async def import_resume_endpoint(
+    resume_id: str = Query(..., description="ID of the legacy resume to import"),
+) -> list[dict[str, Any]]:
+    """Extract and group facts from a legacy resume against the existing fact base.
+
+    Returns a list of candidate dicts each annotated with a ``group`` field:
+      - ``new``: similarity < 0.5 → unique, offered as new facts
+      - ``variant_of``: 0.5 <= similarity < 0.9 → offered as variant phrasing
+      - ``duplicate``: similarity >= 0.9 → near-duplicate, flag only
+
+    Does not persist anything — call POST /facts/confirm to save ``new`` items.
+    """
+    return await fact_extractor.import_resume_facts(resume_id)
+
+
 @router.post("/gap-questions", response_model=list[dict])
 async def get_gap_questions_endpoint(
     job_id: str = Query(..., description="ID of the target job"),

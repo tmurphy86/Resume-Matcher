@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.fact_extractor import confirm_facts, extract_candidate_facts
+from app.services.fact_extractor import confirm_facts, extract_candidate_facts, import_resume_facts
 
 
 # ---------------------------------------------------------------------------
@@ -549,3 +549,158 @@ class TestDedup:
 
         # Should have only called create_fact once
         assert mock_db.create_fact.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# TestImportResumeFacts (RH-210)
+# ---------------------------------------------------------------------------
+
+# A minimal fact dict that list_facts would return.
+_EXISTING_FACT_BASE: dict = {
+    "fact_id": "fact-existing",
+    "statement": "",
+    "context": "Some Context",
+    "source": "workExperience",
+    "metrics_json": {},
+    "tags_json": [],
+    "confidence": "verified",
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "updated_at": "2026-01-01T00:00:00+00:00",
+}
+
+
+class TestImportResumeFacts:
+    """Tests for import_resume_facts() with mocked LLM and db."""
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_new_group(self, mock_db: MagicMock, mock_llm: AsyncMock) -> None:
+        """Statement with no similar existing fact → group='new', existing_fact_id=None."""
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "import-resume-1",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_llm.return_value = [
+            {
+                "statement": "Completely unrelated statement about something else",
+                "context": "New Corp",
+                "source": "workExperience",
+            }
+        ]
+        # Existing fact is totally different → similarity well below 0.5
+        mock_db.list_facts = AsyncMock(
+            return_value=[
+                {
+                    **_EXISTING_FACT_BASE,
+                    "statement": "Quantum physics research on superconductors",
+                }
+            ]
+        )
+
+        result = await import_resume_facts("import-resume-1")
+
+        assert len(result) == 1
+        assert result[0]["group"] == "new"
+        assert result[0]["existing_fact_id"] is None
+        assert result[0]["existing_statement"] is None
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_duplicate_group(self, mock_db: MagicMock, mock_llm: AsyncMock) -> None:
+        """Statement with similarity >= 0.9 → group='duplicate', existing_fact_id set."""
+        statement = "Led a team of 8 engineers delivering a payment system processing $2M/month"
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "import-resume-2",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_llm.return_value = [
+            {
+                "statement": statement,
+                "context": "Acme Corp",
+                "source": "workExperience",
+            }
+        ]
+        existing_fact = {**_EXISTING_FACT_BASE, "fact_id": "fact-dup-1", "statement": statement}
+        # list_facts is called twice: once inside extract_candidate_facts (for duplicate_of),
+        # once inside import_resume_facts (for grouping).
+        mock_db.list_facts = AsyncMock(return_value=[existing_fact])
+
+        result = await import_resume_facts("import-resume-2")
+
+        assert len(result) == 1
+        assert result[0]["group"] == "duplicate"
+        assert result[0]["existing_fact_id"] == "fact-dup-1"
+        assert result[0]["existing_statement"] == statement
+
+    @patch("app.services.fact_extractor._compute_similarity")
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_variant_of_group(
+        self, mock_db: MagicMock, mock_llm: AsyncMock, mock_sim: MagicMock
+    ) -> None:
+        """Similarity in [0.5, 0.9) → group='variant_of', existing_fact_id set."""
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "import-resume-3",
+                "processed_data": SAMPLE_PROCESSED_DATA,
+            }
+        )
+        mock_llm.return_value = [
+            {
+                "statement": "Managed a squad of engineers on a billing platform",
+                "context": "Beta Corp",
+                "source": "workExperience",
+            }
+        ]
+        existing_fact = {
+            **_EXISTING_FACT_BASE,
+            "fact_id": "fact-var-1",
+            "statement": "Led a team of engineers on a payments system",
+        }
+        mock_db.list_facts = AsyncMock(return_value=[existing_fact])
+        # Pin similarity to a value firmly in the variant band.
+        mock_sim.return_value = 0.7
+
+        result = await import_resume_facts("import-resume-3")
+
+        assert len(result) == 1
+        assert result[0]["group"] == "variant_of"
+        assert result[0]["existing_fact_id"] == "fact-var-1"
+        assert result[0]["existing_statement"] == existing_fact["statement"]
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_resume_not_found(self, mock_db: MagicMock, mock_llm: AsyncMock) -> None:
+        """HTTPException(404) when resume doesn't exist."""
+        from fastapi import HTTPException
+
+        mock_db.get_resume = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_resume_facts("nonexistent-resume")
+
+        assert exc_info.value.status_code == 404
+        mock_llm.assert_not_called()
+
+    @patch("app.services.fact_extractor.complete_json", new_callable=AsyncMock)
+    @patch("app.services.fact_extractor.db")
+    async def test_no_processed_data(self, mock_db: MagicMock, mock_llm: AsyncMock) -> None:
+        """HTTPException(404) when resume has no processed_data."""
+        from fastapi import HTTPException
+
+        mock_db.get_resume = AsyncMock(
+            return_value={
+                "resume_id": "resume-no-data",
+                "processed_data": None,
+            }
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await import_resume_facts("resume-no-data")
+
+        assert exc_info.value.status_code == 404
+        mock_llm.assert_not_called()

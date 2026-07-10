@@ -1071,6 +1071,17 @@
       "extractFailed": "Extraction failed. Please try again.",
       "saveFailed": "Failed to save fact.",
       "deleteFailed": "Failed to delete fact."
+    },
+    "importModal": {
+      "title": "Import Old Resume",
+      "selectResume": "Select a resume to import",
+      "importing": "Import",
+      "groupNew": "New",
+      "groupDuplicate": "Near-duplicate",
+      "groupVariant": "Variant phrasing",
+      "existingFact": "Existing: ",
+      "confirmImport": "Add new facts",
+      "noResumes": "No other resumes available"
     }
   },
   "interviewPrep": {

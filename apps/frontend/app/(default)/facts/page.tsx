@@ -25,8 +25,10 @@ import {
   deleteFact,
   extractFacts,
   confirmFacts,
+  importResumeFacts,
   type Fact,
   type ConfirmResult,
+  type ImportedFact,
 } from '@/lib/api/facts';
 
 // ---------------------------------------------------------------------------
@@ -66,6 +68,17 @@ export default function FactsPage() {
   // ── Delete confirm ────────────────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // ── Import modal ──────────────────────────────────────────────────────────
+  const [importOpen, setImportOpen] = useState(false);
+  const [importResumes, setImportResumes] = useState<
+    { resume_id: string; filename: string | null; title?: string | null }[]
+  >([]);
+  const [importSelectedId, setImportSelectedId] = useState<string>('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState<ImportedFact[]>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importConfirming, setImportConfirming] = useState(false);
 
   // ── Extract modal ─────────────────────────────────────────────────────────
   const [extractOpen, setExtractOpen] = useState(false);
@@ -220,6 +233,59 @@ export default function FactsPage() {
     }
   };
 
+  // ── Import flow ───────────────────────────────────────────────────────────
+  const openImport = async () => {
+    setImportOpen(true);
+    setImportError(null);
+    setImportResults([]);
+    setImportSelectedId('');
+    setImportLoading(true);
+    try {
+      const allResumes = await fetchResumeList(true);
+      const nonMaster = allResumes.filter((r) => !r.is_master && r.processing_status === 'ready');
+      setImportResumes(nonMaster);
+    } catch (err) {
+      setImportError(t('facts.errors.loadFailed'));
+      console.error('Failed to load resumes for import:', err);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const runImport = async () => {
+    if (!importSelectedId) return;
+    setImportLoading(true);
+    setImportError(null);
+    setImportResults([]);
+    try {
+      const results = await importResumeFacts(importSelectedId);
+      setImportResults(results);
+    } catch (err) {
+      setImportError(t('facts.errors.extractFailed'));
+      console.error('Failed to import resume facts:', err);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    const newFacts = importResults.filter((r) => r.group === 'new');
+    if (newFacts.length === 0) return;
+    setImportConfirming(true);
+    setImportError(null);
+    try {
+      const results: ConfirmResult[] = await confirmFacts(newFacts);
+      const saved = results.filter((r): r is Fact => !('status' in r));
+      setFacts((prev) => [...prev, ...saved]);
+      setImportOpen(false);
+    } catch (err) {
+      setImportError(t('facts.errors.extractFailed'));
+      console.error('Failed to confirm imported facts:', err);
+    } finally {
+      setImportConfirming(false);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
@@ -248,12 +314,21 @@ export default function FactsPage() {
               <h1 className="font-serif text-4xl uppercase tracking-tight text-black md:text-5xl">
                 {t('facts.title')}
               </h1>
-              <Button
-                onClick={openExtract}
-                className="border border-black bg-primary text-white shadow-sw-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all self-start"
-              >
-                {t('facts.extractButton')}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={openExtract}
+                  className="border border-black bg-primary text-white shadow-sw-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all self-start"
+                >
+                  {t('facts.extractButton')}
+                </Button>
+                <Button
+                  onClick={openImport}
+                  variant="outline"
+                  className="border border-black shadow-sw-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all self-start"
+                >
+                  {t('facts.importModal.title')}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -484,6 +559,167 @@ export default function FactsPage() {
         closeOnConfirm={false}
         onConfirm={confirmDelete}
       />
+
+      {/* ── Import Modal ──────────────────────────────────────────────────── */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-2xl p-0 gap-0">
+          <DialogHeader className="border-b border-black p-6">
+            <DialogTitle className="font-serif text-2xl uppercase tracking-tight">
+              {t('facts.importModal.title')}
+            </DialogTitle>
+            <DialogDescription className="font-mono text-xs text-ink-soft mt-1">
+              {t('facts.importModal.selectResume')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto p-6">
+            {importLoading && importResults.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : importError && importResults.length === 0 ? (
+              <p className="font-mono text-sm text-destructive">{importError}</p>
+            ) : importResults.length === 0 ? (
+              // Resume selection step
+              importResumes.length === 0 ? (
+                <p className="font-mono text-sm text-ink-soft">
+                  {t('facts.importModal.noResumes')}
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {importResumes.map((r) => (
+                    <label
+                      key={r.resume_id}
+                      className="flex cursor-pointer items-center gap-3 border border-black p-3 hover:bg-secondary transition-colors"
+                    >
+                      <input
+                        type="radio"
+                        name="import-resume"
+                        value={r.resume_id}
+                        checked={importSelectedId === r.resume_id}
+                        onChange={() => setImportSelectedId(r.resume_id)}
+                        className="h-4 w-4 border-black accent-primary"
+                      />
+                      <span className="font-mono text-sm">
+                        {r.title ?? r.filename ?? r.resume_id}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )
+            ) : (
+              // Results step — three groups
+              <div className="flex flex-col gap-4">
+                {importError && <p className="font-mono text-sm text-destructive">{importError}</p>}
+
+                {/* New group — Signal Green */}
+                {importResults.filter((r) => r.group === 'new').length > 0 && (
+                  <div>
+                    <p className="mb-2 border-l-4 border-[#15803D] pl-2 font-mono text-xs uppercase tracking-wider text-[#15803D]">
+                      {t('facts.importModal.groupNew')} (
+                      {importResults.filter((r) => r.group === 'new').length})
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {importResults
+                        .filter((r) => r.group === 'new')
+                        .map((r) => (
+                          <div key={r.fact_id} className="border border-[#15803D] p-3">
+                            <p className="text-sm leading-snug">{r.statement}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Near-duplicate group — Alert Orange */}
+                {importResults.filter((r) => r.group === 'duplicate').length > 0 && (
+                  <div>
+                    <p className="mb-2 border-l-4 border-[#F97316] pl-2 font-mono text-xs uppercase tracking-wider text-[#F97316]">
+                      {t('facts.importModal.groupDuplicate')} (
+                      {importResults.filter((r) => r.group === 'duplicate').length})
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {importResults
+                        .filter((r) => r.group === 'duplicate')
+                        .map((r) => (
+                          <div key={r.fact_id} className="border border-[#F97316] p-3">
+                            <p className="text-sm leading-snug">{r.statement}</p>
+                            {r.existing_statement && (
+                              <p className="mt-1 font-mono text-xs text-ink-soft">
+                                {t('facts.importModal.existingFact')}
+                                {r.existing_statement}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Variant group — Hyper Blue */}
+                {importResults.filter((r) => r.group === 'variant_of').length > 0 && (
+                  <div>
+                    <p className="mb-2 border-l-4 border-[#1D4ED8] pl-2 font-mono text-xs uppercase tracking-wider text-[#1D4ED8]">
+                      {t('facts.importModal.groupVariant')} (
+                      {importResults.filter((r) => r.group === 'variant_of').length})
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {importResults
+                        .filter((r) => r.group === 'variant_of')
+                        .map((r) => (
+                          <div key={r.fact_id} className="border border-[#1D4ED8] p-3">
+                            <p className="text-sm leading-snug">{r.statement}</p>
+                            {r.existing_statement && (
+                              <p className="mt-1 font-mono text-xs text-ink-soft">
+                                {t('facts.importModal.existingFact')}
+                                {r.existing_statement}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!importLoading && (
+            <DialogFooter className="border-t border-black p-4 flex-row justify-end gap-3 bg-secondary">
+              <Button
+                variant="outline"
+                onClick={() => setImportOpen(false)}
+                className="border border-black"
+              >
+                {t('facts.cancel')}
+              </Button>
+              {importResults.length === 0 ? (
+                <Button
+                  onClick={runImport}
+                  disabled={!importSelectedId || importResumes.length === 0}
+                  className="border border-black bg-primary text-white shadow-sw-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+                >
+                  {t('facts.importModal.importing')}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleConfirmImport}
+                  disabled={
+                    importConfirming || importResults.filter((r) => r.group === 'new').length === 0
+                  }
+                  className="border border-black bg-primary text-white shadow-sw-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+                >
+                  {importConfirming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t('facts.importModal.confirmImport')
+                  )}
+                </Button>
+              )}
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Extract Modal ──────────────────────────────────────────────────── */}
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>

@@ -1071,6 +1071,17 @@
       "extractFailed": "抽出に失敗しました。もう一度お試しください。",
       "saveFailed": "ファクトの保存に失敗しました。",
       "deleteFailed": "ファクトの削除に失敗しました。"
+    },
+    "importModal": {
+      "title": "旧履歴書をインポート",
+      "selectResume": "インポートする履歴書を選択",
+      "importing": "インポート",
+      "groupNew": "新規",
+      "groupDuplicate": "近似重複",
+      "groupVariant": "類似表現",
+      "existingFact": "既存：",
+      "confirmImport": "新規ファクトを追加",
+      "noResumes": "他の履歴書がありません"
     }
   },
   "interviewPrep": {

@@ -1071,6 +1071,17 @@
       "extractFailed": "提取失败。请重试。",
       "saveFailed": "保存事实失败。",
       "deleteFailed": "删除事实失败。"
+    },
+    "importModal": {
+      "title": "导入旧简历",
+      "selectResume": "选择要导入的简历",
+      "importing": "导入",
+      "groupNew": "新增",
+      "groupDuplicate": "近似重复",
+      "groupVariant": "变体表述",
+      "existingFact": "已有：",
+      "confirmImport": "添加新事实",
+      "noResumes": "没有其他可用简历"
     }
   },
   "interviewPrep": {

@@ -158,6 +158,93 @@ async def extract_candidate_facts(resume_id: str) -> list[dict[str, Any]]:
     return annotated_candidates
 
 
+# Variant similarity band — below duplicate threshold, above noise floor
+_VARIANT_THRESHOLD: float = 0.5
+
+
+def _find_best_match(
+    candidate_statement: str, existing_facts: list[dict[str, Any]]
+) -> tuple[dict[str, Any] | None, float]:
+    """Return the best-matching existing fact and its similarity score.
+
+    Scans all existing facts and returns the one with the highest similarity
+    to *candidate_statement*, along with that similarity score.  If
+    *existing_facts* is empty, returns ``(None, 0.0)``.
+
+    Args:
+        candidate_statement: The statement to compare.
+        existing_facts: List of existing fact dicts from the database.
+
+    Returns:
+        A tuple of (best_matching_fact | None, best_similarity_score).
+    """
+    best_similarity = 0.0
+    best_fact: dict[str, Any] | None = None
+    for existing_fact in existing_facts:
+        similarity = _compute_similarity(
+            candidate_statement, existing_fact.get("statement", "")
+        )
+        if similarity > best_similarity:
+            best_similarity = similarity
+            best_fact = existing_fact
+    return best_fact, best_similarity
+
+
+async def import_resume_facts(source_resume_id: str) -> list[dict[str, Any]]:
+    """Import facts from an old/legacy resume, grouping by similarity to existing facts.
+
+    Groups:
+      - new: similarity < 0.5 to all existing facts → candidate for insertion
+      - variant_of: 0.5 <= similarity < 0.9 → offered as variant phrasing
+      - duplicate: similarity >= 0.9 → near-duplicate, flag only
+
+    Returns a list of dicts with shape:
+      { statement, context, source, metrics_json, tags_json, confidence,
+        group: "new" | "duplicate" | "variant_of",
+        existing_fact_id: str | None,   # set for duplicate and variant_of
+        existing_statement: str | None  # set for duplicate and variant_of
+      }
+
+    Raises HTTPException(404) if the resume is not found or has no processed_data.
+    """
+    # extract_candidate_facts handles 404 for missing resume / missing processed_data
+    candidates = await extract_candidate_facts(source_resume_id)
+
+    # Load all existing facts for similarity comparison
+    try:
+        existing_facts = await db.list_facts()
+    except Exception as e:
+        logger.error(
+            "Failed to load existing facts for import (resume %s): %s", source_resume_id, e
+        )
+        existing_facts = []
+
+    results: list[dict[str, Any]] = []
+    for candidate in candidates:
+        statement = candidate.get("statement", "")
+
+        best_fact, best_similarity = _find_best_match(statement, existing_facts)
+
+        if best_similarity >= _SIMILARITY_THRESHOLD:
+            group = "duplicate"
+        elif best_similarity >= _VARIANT_THRESHOLD:
+            group = "variant_of"
+        else:
+            group = "new"
+            best_fact = None  # do not expose an existing fact for "new" items
+
+        results.append(
+            {
+                **candidate,
+                "group": group,
+                "existing_fact_id": best_fact.get("fact_id") if best_fact else None,
+                "existing_statement": best_fact.get("statement") if best_fact else None,
+            }
+        )
+
+    return results
+
+
 async def confirm_facts(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Persist confirmed/edited candidate facts to the fact base.
 

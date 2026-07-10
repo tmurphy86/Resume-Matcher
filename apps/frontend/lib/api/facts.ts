@@ -93,3 +93,20 @@ export async function confirmFacts(candidates: Fact[]): Promise<ConfirmResult[]>
   const res = await apiPost('/facts/confirm', candidates);
   return asJson<ConfirmResult[]>(res, 'Failed to confirm facts');
 }
+
+export interface ImportedFact extends Fact {
+  group: 'new' | 'duplicate' | 'variant_of';
+  existing_fact_id: string | null;
+  existing_statement: string | null;
+}
+
+export async function importResumeFacts(resumeId: string): Promise<ImportedFact[]> {
+  const res = await apiFetch(`/facts/import-resume?resume_id=${encodeURIComponent(resumeId)}`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(extractDetail(data) || `Import failed (status ${res.status}).`);
+  }
+  return res.json() as Promise<ImportedFact[]>;
+}

@@ -1090,6 +1090,17 @@
       "extractFailed": "Extraction échouée. Veuillez réessayer.",
       "saveFailed": "Échec de l'enregistrement du fait.",
       "deleteFailed": "Échec de la suppression du fait."
+    },
+    "importModal": {
+      "title": "Importer un ancien CV",
+      "selectResume": "Sélectionnez un CV à importer",
+      "importing": "Importer",
+      "groupNew": "Nouveau",
+      "groupDuplicate": "Quasi-doublon",
+      "groupVariant": "Variante de formulation",
+      "existingFact": "Existant : ",
+      "confirmImport": "Ajouter les nouveaux faits",
+      "noResumes": "Aucun autre CV disponible"
     }
   }
 }
