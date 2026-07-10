@@ -119,6 +119,9 @@ class Application(Base):
     applied_at: Mapped[str | None] = mapped_column(String, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     interest_signals: Mapped[list] = mapped_column(JSON, default=list)
+    # Each entry: {"status": str, "at": str (ISO 8601 UTC)}
+    # Populated lazily: existing rows get seeded on their next write.
+    status_history: Mapped[list] = mapped_column(JSON, default=list)
     position: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
     updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)

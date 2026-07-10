@@ -1,6 +1,5 @@
 """Service for parsing job descriptions into structured fields."""
 
-import copy
 import logging
 from typing import Any
 
@@ -62,8 +61,6 @@ async def parse_job_description(job_id: str, job_content: str) -> dict[str, Any]
             return None
 
         # Read → merge → write (ADR-005 dynamic-key pattern).
-        existing_meta = copy.deepcopy(job)
-        existing_meta["parsed"] = parsed
         await db.update_job(job_id, {"parsed": parsed})
     except Exception as exc:
         logger.error(f"JD parse failed to persist parsed result for job {job_id}: {exc}")

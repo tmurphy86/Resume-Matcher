@@ -11,6 +11,7 @@ Two engines back one SQLite file:
 """
 
 import asyncio
+import copy
 import logging
 import shutil
 from datetime import datetime, timezone
@@ -52,6 +53,27 @@ APPLICATION_STATUSES: tuple[str, ...] = (
 def _now() -> str:
     """Current UTC time as an ISO-8601 string (TinyDB-era format)."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def _append_status_history(
+    current_history: list,
+    old_status: str,
+    new_status: str,
+    old_updated_at: str,
+    now: str,
+) -> list:
+    """Return a new history list with backfill seed (if needed) + new entry.
+
+    Backfill: when ``current_history`` is empty the row predates history
+    tracking; we seed it with ``{"status": old_status, "at": old_updated_at}``
+    before appending the new entry so the record is not left without an origin.
+    Never mutates the input list.
+    """
+    history: list = copy.deepcopy(current_history or [])
+    if not history:
+        history.append({"status": old_status, "at": old_updated_at})
+    history.append({"status": new_status, "at": now})
+    return history
 
 
 class Database:
@@ -177,6 +199,7 @@ class Database:
             "applied_at": row.applied_at,
             "notes": row.notes,
             "interest_signals": row.interest_signals or [],
+            "status_history": row.status_history or [],
             "position": row.position,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
@@ -577,6 +600,7 @@ class Database:
                 applied_at=applied_at,
                 notes=notes,
                 interest_signals=interest_signals or [],
+                status_history=[{"status": status, "at": now}],
                 position=position,
                 created_at=now,
                 updated_at=now,
@@ -643,6 +667,7 @@ class Database:
                 role=role,
                 applied_at=None,
                 notes=None,
+                status_history=[{"status": "considering", "at": now}],
                 position=position,
                 created_at=now,
                 updated_at=now,
@@ -690,7 +715,16 @@ class Database:
                     setattr(row, key, updates[key])
 
             moved = "status" in updates or "position" in updates
+            now = _now()
             if moved:
+                if old_status != new_status:
+                    row.status_history = _append_status_history(
+                        row.status_history or [],
+                        old_status,
+                        new_status,
+                        row.updated_at,
+                        now,
+                    )
                 row.status = new_status
                 # Park it out of the way, renumber both columns, then reinsert.
                 row.position = 10_000_000
@@ -715,7 +749,7 @@ class Database:
                 for index, item in enumerate(ordered):
                     item.position = index
 
-            row.updated_at = _now()
+            row.updated_at = now
             await session.commit()
             return self._application_to_dict(row)
 
@@ -730,10 +764,20 @@ class Database:
                 row = await session.get(Application, application_id)
                 if row is None:
                     continue
-                affected_old.add(row.status)
+                old_status = row.status
+                affected_old.add(old_status)
+                now = _now()
+                if old_status != status:
+                    row.status_history = _append_status_history(
+                        row.status_history or [],
+                        old_status,
+                        status,
+                        row.updated_at,
+                        now,
+                    )
                 row.status = status
                 row.position = 20_000_000 + moved  # provisional, renumbered below
-                row.updated_at = _now()
+                row.updated_at = now
                 moved += 1
             await session.flush()
             for old_status in affected_old - {status}:

@@ -1,6 +1,7 @@
 """Job description management endpoints."""
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
@@ -51,7 +52,7 @@ async def upload_job_descriptions(request: JobUploadRequest) -> JobUploadRespons
 
 
 @router.post("/backfill-parse")
-async def backfill_parse() -> dict:
+async def backfill_parse() -> dict[str, Any]:
     """Parse all jobs that do not yet have structured parsed data.
 
     Idempotent — jobs that already have ``parsed`` in their metadata are
