@@ -11,10 +11,11 @@ import {
   listCareerReports,
   generateCareerReport,
   clusterArchetypes,
+  listApplicationsForCareer,
   type CareerReport,
   type ArchetypeScore,
 } from '@/lib/api/career';
-import { listApplications, type Application } from '@/lib/api/tracker';
+import { type Application } from '@/lib/api/tracker';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -380,14 +381,23 @@ export default function CareerPage() {
     setLoading(true);
     setError(null);
     try {
-      const [data, appData] = await Promise.all([listCareerReports(), listApplications()]);
+      const data = await listCareerReports();
       setReports(data);
       if (data.length > 0) {
         setActiveReport(data[0]);
       }
-      // Flatten the columnar response into a flat list for rate computation.
-      const flat = Object.values(appData.columns).flat() as ApplicationWithHistory[];
-      setApplications(flat);
+
+      // Applications are fetched separately so a tracker outage does not
+      // block the career intelligence view — outcome rates degrade gracefully
+      // to 0 rather than showing an error for the whole page.
+      try {
+        const appData = await listApplicationsForCareer();
+        const flat = Object.values(appData.columns).flat() as ApplicationWithHistory[];
+        setApplications(flat);
+      } catch (appErr) {
+        console.error('Failed to load application data for career page:', appErr);
+        // Non-fatal: the page still renders reports; outcome rates show 0.
+      }
     } catch (err) {
       setError(t('career.errors.loadFailed'));
       console.error('Failed to load career reports:', err);

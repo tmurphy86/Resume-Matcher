@@ -63,9 +63,27 @@ def init_models_sync(engine: Engine) -> None:
     """Create all tables (idempotent) using a sync engine connection."""
     Base.metadata.create_all(engine)
 
-    # ``create_all`` does not ALTER existing SQLite tables. Keep this additive
-    # migration idempotent so older local databases can load resumes safely.
+    # ``create_all`` does not ALTER existing SQLite tables. Keep all migrations
+    # here — additive and idempotent — so older local databases load safely.
     with engine.begin() as conn:
-        columns = conn.exec_driver_sql("PRAGMA table_info(resumes)").mappings().all()
-        if columns and "interview_prep" not in {column["name"] for column in columns}:
+        # --- resumes: interview_prep (added after initial schema) ---
+        resumes_cols = conn.exec_driver_sql("PRAGMA table_info(resumes)").mappings().all()
+        if resumes_cols and "interview_prep" not in {c["name"] for c in resumes_cols}:
             conn.exec_driver_sql("ALTER TABLE resumes ADD COLUMN interview_prep TEXT")
+
+        # --- applications: interest_signals (RH-105) + status_history (P3/RH-307) ---
+        # Both JSON columns were added to the ORM model after the table was first
+        # created.  Without these ALTER TABLE statements SQLAlchemy's generated
+        # SELECT references the new column names and SQLite raises OperationalError,
+        # causing GET /api/applications to return HTTP 500 for every client.
+        app_cols = conn.exec_driver_sql("PRAGMA table_info(applications)").mappings().all()
+        if app_cols:
+            existing = {c["name"] for c in app_cols}
+            if "interest_signals" not in existing:
+                conn.exec_driver_sql(
+                    "ALTER TABLE applications ADD COLUMN interest_signals TEXT DEFAULT '[]'"
+                )
+            if "status_history" not in existing:
+                conn.exec_driver_sql(
+                    "ALTER TABLE applications ADD COLUMN status_history TEXT DEFAULT '[]'"
+                )

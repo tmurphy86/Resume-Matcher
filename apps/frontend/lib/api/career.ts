@@ -1,4 +1,5 @@
 import { apiFetch, apiPost } from './client';
+import { listApplications, type ApplicationListResponse } from './tracker';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,4 +89,18 @@ export async function listCareerReports(): Promise<CareerReport[]> {
 export async function getCareerReport(id: number): Promise<CareerReport> {
   const res = await apiFetch(`/career/reports/${id}`, { credentials: 'include' });
   return asJson<CareerReport>(res, 'Failed to load career report');
+}
+
+/**
+ * List applications for the career intelligence view.
+ *
+ * Re-uses the tracker endpoint but surfaces a career-domain error message so
+ * the career page never shows a tracker-worded failure to the user.
+ */
+export async function listApplicationsForCareer(): Promise<ApplicationListResponse> {
+  try {
+    return await listApplications();
+  } catch {
+    throw new Error('Failed to load career data. Please try again.');
+  }
 }
