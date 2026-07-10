@@ -9,6 +9,8 @@ Tests cover:
 - Invented job IDs from LLM → HTTPException(500), no persistence
 - No parsed jobs → HTTPException(400)
 - ARCHETYPE_CLUSTER_PROMPT: format/placeholder test with canned LLM response
+- generate_career_report: happy path, missing report, LLM errors, invalid citations
+- CAREER_ADVICE_PROMPT: placeholder + canned response validation
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,9 +19,13 @@ import pytest
 from fastapi import HTTPException
 
 from app.services.career_intelligence import (
+    _build_archetypes_scores_block,
     _build_job_descriptions_block,
+    _narrative_to_markdown,
     _validate_clustering_result,
+    _validate_narrative_result,
     cluster_jds,
+    generate_career_report,
 )
 
 # ---------------------------------------------------------------------------
@@ -433,3 +439,411 @@ class TestArchetypeClusterPrompt:
         result = _validate_clustering_result(canned, {"job-1", "job-2"})
         assert result[0]["name"] == "Platform Engineer"
         assert set(result[0]["jd_ids"]) == {"job-1", "job-2"}
+
+
+# ---------------------------------------------------------------------------
+# _validate_narrative_result
+# ---------------------------------------------------------------------------
+
+
+class TestValidateNarrativeResult:
+    def test_valid_narrative_passes(self) -> None:
+        narrative = {
+            "target": ["Backend Engineer"],
+            "stretch": [{"name": "ML Engineer", "gap_closing_plan": "Learn MLflow"}],
+            "deprioritize": ["Frontend Dev"],
+            "market_observations": "Backend roles are in high demand.",
+            "cited_fact_ids": [],
+            "cited_jd_ids": [],
+        }
+        result = _validate_narrative_result(narrative)
+        assert result["target"] == ["Backend Engineer"]
+
+    def test_non_dict_raises(self) -> None:
+        with pytest.raises(ValueError, match="instead of dict"):
+            _validate_narrative_result("not a dict")
+
+    def test_missing_required_key_raises(self) -> None:
+        with pytest.raises(ValueError, match="missing required keys"):
+            _validate_narrative_result(
+                {
+                    "target": [],
+                    "stretch": [],
+                    # "deprioritize" and "market_observations" missing
+                }
+            )
+
+    def test_extra_keys_allowed(self) -> None:
+        """Extra keys in the narrative are ignored (the LLM may add extras)."""
+        narrative = {
+            "target": [],
+            "stretch": [],
+            "deprioritize": [],
+            "market_observations": "...",
+            "extra_key": "should be ignored",
+        }
+        result = _validate_narrative_result(narrative)
+        assert "extra_key" in result  # preserved but not required
+
+
+# ---------------------------------------------------------------------------
+# _narrative_to_markdown
+# ---------------------------------------------------------------------------
+
+
+class TestNarrativeToMarkdown:
+    def test_full_narrative_rendered(self) -> None:
+        narrative = {
+            "target": ["Backend Engineer"],
+            "stretch": [{"name": "ML Engineer", "gap_closing_plan": "Learn MLflow and PyTorch."}],
+            "deprioritize": ["Frontend Dev"],
+            "market_observations": "Strong demand for Python backends.",
+            "cited_fact_ids": [],
+            "cited_jd_ids": [],
+        }
+        md = _narrative_to_markdown(narrative)
+        assert "## Target Roles" in md
+        assert "Backend Engineer" in md
+        assert "## Stretch Opportunities" in md
+        assert "ML Engineer" in md
+        assert "Learn MLflow" in md
+        assert "## Deprioritize" in md
+        assert "Frontend Dev" in md
+        assert "## Market Observations" in md
+        assert "Python backends" in md
+
+    def test_empty_sections_omitted(self) -> None:
+        narrative = {
+            "target": [],
+            "stretch": [],
+            "deprioritize": [],
+            "market_observations": "",
+        }
+        md = _narrative_to_markdown(narrative)
+        assert md.strip() == ""
+
+    def test_string_items_in_stretch(self) -> None:
+        """Stretch items that are plain strings (not dicts) render without error."""
+        narrative = {
+            "target": [],
+            "stretch": ["ML Engineer"],
+            "deprioritize": [],
+            "market_observations": "",
+        }
+        md = _narrative_to_markdown(narrative)
+        assert "ML Engineer" in md
+
+
+# ---------------------------------------------------------------------------
+# _build_archetypes_scores_block
+# ---------------------------------------------------------------------------
+
+
+class TestBuildArchetypesScoresBlock:
+    def test_includes_archetype_names_and_scores(self) -> None:
+        archetypes = [
+            {
+                "name": "Backend Engineer",
+                "description": "Builds server-side systems.",
+                "jd_ids": ["job-A"],
+            }
+        ]
+        scores = {"Backend Engineer": {"attraction": 4.5, "fit": 0.75, "gaps": []}}
+        block = _build_archetypes_scores_block(archetypes, scores)
+        assert "Backend Engineer" in block
+        assert "4.50" in block
+        assert "75%" in block
+
+    def test_gaps_listed(self) -> None:
+        archetypes = [
+            {
+                "name": "ML Engineer",
+                "description": "ML pipelines.",
+                "jd_ids": ["job-B"],
+            }
+        ]
+        scores = {
+            "ML Engineer": {
+                "attraction": 2.0,
+                "fit": 0.3,
+                "gaps": ["MLflow experience", "PyTorch skills"],
+            }
+        }
+        block = _build_archetypes_scores_block(archetypes, scores)
+        assert "MLflow experience" in block
+        assert "PyTorch skills" in block
+
+
+# ---------------------------------------------------------------------------
+# generate_career_report — integration-style with mocked db + LLM
+# ---------------------------------------------------------------------------
+
+# Canned LLM narrative response
+_VALID_NARRATIVE_RESULT = {
+    "target": ["Backend Engineer"],
+    "stretch": [{"name": "ML Engineer", "gap_closing_plan": "Complete MLflow course."}],
+    "deprioritize": [],
+    "market_observations": "Strong Python demand across all archetypes.",
+    "cited_fact_ids": [],
+    "cited_jd_ids": ["job-A"],
+}
+
+_SAMPLE_REPORT = {
+    "id": 1,
+    "created_at": "2026-07-10T00:00:00+00:00",
+    "archetypes_json": _VALID_LLM_RESULT["archetypes"],
+    "jd_ids_json": ["job-A", "job-B"],
+    "scores_json": None,
+    "advice_md": None,
+    "model_used": None,
+}
+
+_UPDATED_REPORT = {
+    **_SAMPLE_REPORT,
+    "scores_json": {
+        "Backend Engineer": {"attraction": 4.5, "fit": 0.5, "gaps": []},
+        "ML Engineer": {"attraction": 0.0, "fit": 0.0, "gaps": []},
+    },
+    "advice_md": "## Target Roles\n- **Backend Engineer**",
+    "model_used": "openai/gpt-4o",
+}
+
+
+class TestGenerateCareerReport:
+    """Tests for generate_career_report() with mocked db + LLM."""
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_happy_path_updates_report(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """Happy path: LLM returns valid narrative → report updated and returned."""
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        mock_db.update_career_report = AsyncMock(return_value=_UPDATED_REPORT)
+        mock_llm.return_value = _VALID_NARRATIVE_RESULT
+
+        with patch("app.services.career_intelligence.get_llm_config") as mock_cfg, \
+             patch("app.services.career_intelligence.get_model_name") as mock_mn:
+            mock_mn.return_value = "openai/gpt-4o"
+            mock_cfg.return_value = MagicMock()
+            report = await generate_career_report()
+
+        assert report["id"] == 1
+        assert report["scores_json"] is not None
+        assert report["advice_md"] is not None
+        mock_db.update_career_report.assert_called_once()
+        call_kwargs = mock_db.update_career_report.call_args.kwargs
+        assert call_kwargs["report_id"] == 1
+        assert "Backend Engineer" in call_kwargs["scores_json"]
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_no_career_reports_raises_400(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """No career reports in DB → HTTP 400."""
+        mock_db.get_career_reports = AsyncMock(return_value=[])
+
+        with pytest.raises(HTTPException) as exc_info:
+            await generate_career_report()
+
+        assert exc_info.value.status_code == 400
+        mock_llm.assert_not_called()
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_no_master_resume_raises_400(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """No master resume → HTTP 400."""
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await generate_career_report()
+
+        assert exc_info.value.status_code == 400
+        mock_llm.assert_not_called()
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_llm_exception_raises_500(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """LLM raises an exception → HTTP 500, no update."""
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.update_career_report = AsyncMock()
+        mock_llm.side_effect = RuntimeError("LLM timeout")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await generate_career_report()
+
+        assert exc_info.value.status_code == 500
+        mock_db.update_career_report.assert_not_called()
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_malformed_llm_output_raises_500(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """LLM returns non-dict → HTTP 500, no update."""
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.update_career_report = AsyncMock()
+        mock_llm.return_value = "not a dict"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await generate_career_report()
+
+        assert exc_info.value.status_code == 500
+        mock_db.update_career_report.assert_not_called()
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_invalid_cited_fact_ids_flags_report(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """LLM cites a fact_id that does not exist → advice_md set to error marker."""
+        narrative_with_bad_ids = {
+            **_VALID_NARRATIVE_RESULT,
+            "cited_fact_ids": ["nonexistent-fact-uuid"],
+            "cited_jd_ids": [],
+        }
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])  # no facts in DB
+        updated_with_error = {**_SAMPLE_REPORT, "advice_md": "[CITATION ERROR: invalid IDs cited]"}
+        mock_db.update_career_report = AsyncMock(return_value=updated_with_error)
+        mock_llm.return_value = narrative_with_bad_ids
+
+        with patch("app.services.career_intelligence.get_llm_config"), \
+             patch("app.services.career_intelligence.get_model_name", return_value=None):
+            report = await generate_career_report()
+
+        call_kwargs = mock_db.update_career_report.call_args.kwargs
+        assert call_kwargs["advice_md"] == "[CITATION ERROR: invalid IDs cited]"
+        assert report["advice_md"] == "[CITATION ERROR: invalid IDs cited]"
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_invalid_cited_jd_ids_flags_report(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """LLM cites a jd_id that does not exist → advice_md set to error marker."""
+        narrative_with_bad_jd = {
+            **_VALID_NARRATIVE_RESULT,
+            "cited_fact_ids": [],
+            "cited_jd_ids": ["invented-jd-id"],
+        }
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.list_facts = AsyncMock(return_value=[])
+        updated_with_error = {**_SAMPLE_REPORT, "advice_md": "[CITATION ERROR: invalid IDs cited]"}
+        mock_db.update_career_report = AsyncMock(return_value=updated_with_error)
+        mock_llm.return_value = narrative_with_bad_jd
+
+        with patch("app.services.career_intelligence.get_llm_config"), \
+             patch("app.services.career_intelligence.get_model_name", return_value=None):
+            report = await generate_career_report()
+
+        call_kwargs = mock_db.update_career_report.call_args.kwargs
+        assert call_kwargs["advice_md"] == "[CITATION ERROR: invalid IDs cited]"
+
+    @patch("app.services.career_intelligence.complete_json", new_callable=AsyncMock)
+    @patch("app.services.career_intelligence.db")
+    async def test_valid_cited_ids_produce_markdown(
+        self, mock_db: MagicMock, mock_llm: AsyncMock
+    ) -> None:
+        """Valid cited IDs → advice_md contains real Markdown (not error marker)."""
+        narrative_clean = {
+            **_VALID_NARRATIVE_RESULT,
+            "cited_fact_ids": ["fact-1"],
+            "cited_jd_ids": ["job-A"],
+        }
+        mock_db.get_career_reports = AsyncMock(return_value=[_SAMPLE_REPORT])
+        mock_db.list_jobs = AsyncMock(return_value=[_JOB_A, _JOB_B])
+        mock_db.list_applications = AsyncMock(return_value=[])
+        mock_db.get_master_resume = AsyncMock(
+            return_value={"resume_id": "r1", "processed_data": {}}
+        )
+        mock_db.list_facts = AsyncMock(return_value=[{"fact_id": "fact-1"}])
+        mock_db.update_career_report = AsyncMock(return_value=_UPDATED_REPORT)
+        mock_llm.return_value = narrative_clean
+
+        with patch("app.services.career_intelligence.get_llm_config"), \
+             patch("app.services.career_intelligence.get_model_name", return_value=None):
+            await generate_career_report()
+
+        call_kwargs = mock_db.update_career_report.call_args.kwargs
+        assert "[CITATION ERROR" not in call_kwargs["advice_md"]
+        assert "##" in call_kwargs["advice_md"]  # has Markdown headings
+
+
+# ---------------------------------------------------------------------------
+# CAREER_ADVICE_PROMPT — deterministic parser test
+# ---------------------------------------------------------------------------
+
+
+class TestCareerAdvicePrompt:
+    """Verify the advice prompt template and a canned LLM response."""
+
+    def test_prompt_contains_required_placeholders(self) -> None:
+        from app.prompts.templates import CAREER_ADVICE_PROMPT
+
+        assert "{archetypes_with_scores}" in CAREER_ADVICE_PROMPT
+        assert "{output_language}" in CAREER_ADVICE_PROMPT
+
+    def test_prompt_formats_without_error(self) -> None:
+        from app.prompts.templates import CAREER_ADVICE_PROMPT
+
+        rendered = CAREER_ADVICE_PROMPT.format(
+            archetypes_with_scores="--- ARCHETYPE: Backend Engineer ---\nFit: 75%",
+            output_language="English",
+        )
+        assert "Backend Engineer" in rendered
+        assert "English" in rendered
+
+    def test_canned_response_validates(self) -> None:
+        """A canned LLM narrative response passes _validate_narrative_result."""
+        canned = {
+            "target": ["Backend Engineer"],
+            "stretch": [
+                {
+                    "name": "ML Engineer",
+                    "gap_closing_plan": "Complete MLflow course and build a side project.",
+                }
+            ],
+            "deprioritize": ["Frontend Developer"],
+            "market_observations": "Backend Python roles dominate the current JD set.",
+            "cited_fact_ids": [],
+            "cited_jd_ids": [],
+        }
+        result = _validate_narrative_result(canned)
+        assert result["target"] == ["Backend Engineer"]
+        assert result["stretch"][0]["name"] == "ML Engineer"
+        assert "MLflow" in result["stretch"][0]["gap_closing_plan"]

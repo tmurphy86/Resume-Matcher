@@ -1,4 +1,4 @@
-"""Career intelligence API endpoints (RH-304)."""
+"""Career intelligence API endpoints (RH-304 + RH-305)."""
 
 import logging
 from typing import Any
@@ -30,6 +30,26 @@ async def cluster_jds() -> dict[str, Any]:
         500: LLM call failed or returned malformed output.
     """
     return await career_intelligence.cluster_jds()
+
+
+@router.post("/report", status_code=200)
+async def generate_career_report() -> dict[str, Any]:
+    """Generate attraction/fit scores and LLM advice for the most recent report.
+
+    Computes deterministic scores (attraction = mean interest-signal weight;
+    fit = fact/requirement coverage ratio) per archetype, calls the LLM for a
+    structured advice narrative, validates every cited fact_id and jd_id, and
+    updates the most recent CareerReport row with ``scores_json``,
+    ``advice_md``, and ``model_used``.
+
+    Returns:
+        The updated CareerReport as a JSON object.
+
+    Raises:
+        400: No career reports found, or no master resume.
+        500: LLM call failed or returned malformed output.
+    """
+    return await career_intelligence.generate_career_report()
 
 
 @router.get("/reports")

@@ -964,6 +964,33 @@ class Database:
             row = await session.get(CareerReport, report_id)
             return self._career_report_to_dict(row) if row else None
 
+    async def update_career_report(
+        self,
+        report_id: int,
+        scores_json: dict | None = None,
+        advice_md: str | None = None,
+        model_used: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Update scores_json, advice_md, and model_used on an existing report.
+
+        Only non-None keyword arguments are written; passing None for a field
+        leaves the stored value unchanged.  Returns the updated report dict, or
+        None when the report does not exist.
+        """
+        async with self._session() as session:
+            row = await session.get(CareerReport, report_id)
+            if row is None:
+                return None
+            if scores_json is not None:
+                row.scores_json = scores_json
+            if advice_md is not None:
+                row.advice_md = advice_md
+            if model_used is not None:
+                row.model_used = model_used
+            await session.commit()
+            await session.refresh(row)
+            return self._career_report_to_dict(row)
+
     # -- Encrypted API key store (sync; read on the LLM hot path) -----------
 
     def get_api_key_ciphertexts(self) -> dict[str, str]:

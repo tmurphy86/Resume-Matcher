@@ -571,6 +571,38 @@ Output this exact JSON format:
   "strategy_notes": "brief notes for the next editing pass"
 }}"""
 
+CAREER_ADVICE_PROMPT = """You are a career strategist. Given the candidate's role archetypes with attraction and fit scores, produce a prioritised action plan.
+
+Respond in {output_language}.
+Output ONLY a JSON object — no prose, no markdown fences.
+
+Archetypes and scores:
+{archetypes_with_scores}
+
+Required output schema:
+{{
+  "target": ["archetype name — high attraction AND high fit; pursue actively"],
+  "stretch": [
+    {{
+      "name": "archetype name — high attraction but fit gap",
+      "gap_closing_plan": "Concrete 2-3 sentence plan to close the fit gap"
+    }}
+  ],
+  "deprioritize": ["archetype name — low attraction or low fit; not worth optimising for now"],
+  "market_observations": "2-4 sentences on cross-archetype patterns, transferable strengths, or market signals visible in the JD set.",
+  "cited_fact_ids": ["list any specific resume fact IDs that support your observations; use exact IDs from the archetype data"],
+  "cited_jd_ids": ["list any specific JD IDs you draw on; use exact IDs from the archetype data"]
+}}
+
+Rules:
+- Every archetype must appear in exactly one of: target, stretch (by name), or deprioritize.
+- An archetype is "target" when attraction >= 3.0 AND fit >= 0.5.
+- An archetype is "stretch" when attraction >= 3.0 AND fit < 0.5.
+- Otherwise it is "deprioritize".
+- "gap_closing_plan" must reference the actual gaps listed for that archetype.
+- "market_observations" must be grounded in the provided data — do NOT speculate beyond it.
+- cited_fact_ids and cited_jd_ids MUST be exact IDs from the data above; do not invent IDs."""
+
 DIFF_IMPROVE_PROMPT = """Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
 
 {facts_section}
