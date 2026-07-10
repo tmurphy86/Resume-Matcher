@@ -1156,9 +1156,12 @@
     "card": {
       "attraction": "Attraction",
       "fit": "Fit",
+      "responseRate": "Response Rate",
+      "interviewRate": "Interview Rate",
       "gaps": "Top Gaps",
       "jdCount": "JDs"
     },
+    "staleReportBanner": "Report stale — {count} new applications since last report",
     "advice": {
       "title": "Strategic Advice",
       "unverified": "AI-generated · unverified"

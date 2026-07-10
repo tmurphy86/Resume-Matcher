@@ -1156,9 +1156,12 @@
     "card": {
       "attraction": "Atracción",
       "fit": "Ajuste",
+      "responseRate": "Tasa de respuesta",
+      "interviewRate": "Tasa de entrevistas",
       "gaps": "Principales brechas",
       "jdCount": "JDs"
     },
+    "staleReportBanner": "Informe desactualizado — {count} nuevas solicitudes desde el último informe",
     "advice": {
       "title": "Consejos estratégicos",
       "unverified": "Generado por IA · sin verificar"

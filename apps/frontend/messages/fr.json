@@ -1156,9 +1156,12 @@
     "card": {
       "attraction": "Attraction",
       "fit": "Adéquation",
+      "responseRate": "Taux de réponse",
+      "interviewRate": "Taux d'entretien",
       "gaps": "Principaux écarts",
       "jdCount": "offres"
     },
+    "staleReportBanner": "Rapport obsolète — {count} nouvelles candidatures depuis le dernier rapport",
     "advice": {
       "title": "Conseils stratégiques",
       "unverified": "Généré par IA · non vérifié"

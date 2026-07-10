@@ -188,6 +188,69 @@ def compute_fit_score(
     return covered / len(requirements), gaps
 
 
+def compute_outcome_rates(
+    applications: list[dict[str, Any]],
+    archetype_jd_ids: list[str],
+) -> dict[str, float]:
+    """Compute response and interview rates for one archetype.
+
+    Returns ``{"response_rate": 0.0-1.0, "interview_rate": 0.0-1.0}`` for
+    applications whose ``job_id`` is in *archetype_jd_ids*.
+
+    response_rate = apps that have any ``status_history`` entry with status in
+                   ``{'response', 'interview', 'offer', 'accepted'}`` / total_apps
+    interview_rate = apps with any entry in ``{'interview', 'offer', 'accepted'}``
+                    / total_apps
+
+    Uses ``status_history`` (not current ``status``) so historical transitions
+    are counted.  Returns ``{"response_rate": 0.0, "interview_rate": 0.0}`` if
+    no applications match.
+
+    The result is deterministic: identical inputs produce identical output.
+
+    Args:
+        applications: All application dicts (each may have ``status_history``).
+        archetype_jd_ids: Job IDs belonging to this archetype.
+
+    Returns:
+        Dict with ``response_rate`` and ``interview_rate`` in [0.0, 1.0].
+    """
+    _RESPONSE_STATUSES: frozenset[str] = frozenset(
+        {"response", "interview", "offer", "accepted"}
+    )
+    _INTERVIEW_STATUSES: frozenset[str] = frozenset(
+        {"interview", "offer", "accepted"}
+    )
+
+    member_ids: set[str] = set(archetype_jd_ids)
+    total = 0
+    response_count = 0
+    interview_count = 0
+
+    for app in applications:
+        if app.get("job_id") not in member_ids:
+            continue
+        total += 1
+        history: list[Any] = app.get("status_history") or []
+        statuses_seen: set[str] = {
+            entry.get("status", "")
+            for entry in history
+            if isinstance(entry, dict)
+        }
+        if statuses_seen & _RESPONSE_STATUSES:
+            response_count += 1
+        if statuses_seen & _INTERVIEW_STATUSES:
+            interview_count += 1
+
+    if total == 0:
+        return {"response_rate": 0.0, "interview_rate": 0.0}
+
+    return {
+        "response_rate": response_count / total,
+        "interview_rate": interview_count / total,
+    }
+
+
 def _build_job_descriptions_block(jobs: list[dict[str, Any]]) -> str:
     """Format parsed jobs into a text block for the clustering prompt.
 

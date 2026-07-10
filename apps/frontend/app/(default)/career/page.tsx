@@ -14,6 +14,7 @@ import {
   type CareerReport,
   type ArchetypeScore,
 } from '@/lib/api/career';
+import { listApplications, type Application } from '@/lib/api/tracker';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -21,6 +22,45 @@ import {
 
 const ATTRACTION_THRESHOLD = 2.5;
 const FIT_THRESHOLD = 0.5;
+const STALE_APP_THRESHOLD = 5;
+
+// ---------------------------------------------------------------------------
+// Outcome rate types and computation
+// ---------------------------------------------------------------------------
+
+interface StatusHistoryEntry {
+  status: string;
+  at: string;
+}
+
+type ApplicationWithHistory = Application & { status_history: StatusHistoryEntry[] };
+
+const _RESPONSE_STATUSES = new Set(['response', 'interview', 'offer', 'accepted']);
+const _INTERVIEW_STATUSES = new Set(['interview', 'offer', 'accepted']);
+
+export function computeOutcomeRates(
+  applications: ApplicationWithHistory[],
+  archetypeJdIds: string[]
+): { responseRate: number; interviewRate: number } {
+  const memberIds = new Set(archetypeJdIds);
+  const members = applications.filter((a) => memberIds.has(a.job_id));
+  if (members.length === 0) return { responseRate: 0, interviewRate: 0 };
+
+  let responseCount = 0;
+  let interviewCount = 0;
+
+  for (const app of members) {
+    const history = app.status_history || [];
+    const hasSeen = (set: Set<string>) => history.some((e) => set.has(e.status));
+    if (hasSeen(_RESPONSE_STATUSES)) responseCount++;
+    if (hasSeen(_INTERVIEW_STATUSES)) interviewCount++;
+  }
+
+  return {
+    responseRate: responseCount / members.length,
+    interviewRate: interviewCount / members.length,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -222,9 +262,11 @@ function AttractionFitQuadrant({ scores }: QuadrantProps) {
 interface ArchetypeCardProps {
   score: ArchetypeScore;
   jdCount: number;
+  responseRate: number;
+  interviewRate: number;
 }
 
-function ArchetypeCard({ score, jdCount }: ArchetypeCardProps) {
+function ArchetypeCard({ score, jdCount, responseRate, interviewRate }: ArchetypeCardProps) {
   const { t } = useTranslations();
   const topGaps = score.gaps.slice(0, 3);
 
@@ -248,6 +290,20 @@ function ArchetypeCard({ score, jdCount }: ArchetypeCardProps) {
             {t('career.card.fit')}
           </p>
           <p className="font-mono text-xl font-bold">{formatFit(score.fit)}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-black border-b border-black">
+        <div className="px-4 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-soft">
+            {t('career.card.responseRate')}
+          </p>
+          <p className="font-mono text-xl font-bold">{formatFit(responseRate)}</p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-ink-soft">
+            {t('career.card.interviewRate')}
+          </p>
+          <p className="font-mono text-xl font-bold">{formatFit(interviewRate)}</p>
         </div>
       </div>
       {topGaps.length > 0 && (
@@ -312,6 +368,7 @@ export default function CareerPage() {
 
   const [reports, setReports] = useState<CareerReport[]>([]);
   const [activeReport, setActiveReport] = useState<CareerReport | null>(null);
+  const [applications, setApplications] = useState<ApplicationWithHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -323,11 +380,14 @@ export default function CareerPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listCareerReports();
+      const [data, appData] = await Promise.all([listCareerReports(), listApplications()]);
       setReports(data);
       if (data.length > 0) {
         setActiveReport(data[0]);
       }
+      // Flatten the columnar response into a flat list for rate computation.
+      const flat = Object.values(appData.columns).flat() as ApplicationWithHistory[];
+      setApplications(flat);
     } catch (err) {
       setError(t('career.errors.loadFailed'));
       console.error('Failed to load career reports:', err);
@@ -374,6 +434,15 @@ export default function CareerPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   const hasScores = activeReport?.scores_json && activeReport.scores_json.length > 0;
+
+  // Stale-report nudge: count applications created after the latest report.
+  const latestReport = reports.length > 0 ? reports[0] : null;
+  const newAppsCount =
+    latestReport != null
+      ? applications.filter((a) => new Date(a.created_at) > new Date(latestReport.created_at))
+          .length
+      : 0;
+  const showStaleBanner = newAppsCount >= STALE_APP_THRESHOLD;
 
   return (
     <div
@@ -442,6 +511,15 @@ export default function CareerPage() {
             )}
           </div>
 
+          {/* Stale-report nudge */}
+          {showStaleBanner && (
+            <div className="border-b border-black px-8 py-3">
+              <p className="border border-black bg-canvas shadow-[2px_2px_0px_black] px-4 py-2 font-mono text-sm">
+                {t('career.staleReportBanner', { count: String(newAppsCount) })}
+              </p>
+            </div>
+          )}
+
           {/* Body */}
           {loading ? (
             <div className="flex items-center justify-center p-16">
@@ -495,11 +573,14 @@ export default function CareerPage() {
                           const archetype = activeReport.archetypes_json.find(
                             (a) => a.name === score.archetype_name
                           );
+                          const rates = computeOutcomeRates(applications, archetype?.jd_ids ?? []);
                           return (
                             <ArchetypeCard
                               key={score.archetype_name}
                               score={score}
                               jdCount={archetype?.jd_ids.length ?? 0}
+                              responseRate={rates.responseRate}
+                              interviewRate={rates.interviewRate}
                             />
                           );
                         })}

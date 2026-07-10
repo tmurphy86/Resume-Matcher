@@ -14,6 +14,7 @@ from app.services.career_intelligence import (
     _tokenize,
     compute_attraction_score,
     compute_fit_score,
+    compute_outcome_rates,
 )
 
 # ---------------------------------------------------------------------------
@@ -372,3 +373,147 @@ class TestComputeFitScore:
         assert fit == pytest.approx(1.0 / 3.0)
         assert len(gaps) == 2
         assert "Python experience" not in gaps
+
+
+# ---------------------------------------------------------------------------
+# compute_outcome_rates — deterministic
+# ---------------------------------------------------------------------------
+
+# Sample applications with status_history for outcome rate tests.
+_APPS_FOR_RATES = [
+    {
+        "application_id": "r1",
+        "job_id": "job-A",
+        "status_history": [
+            {"status": "applied", "at": "2025-01-01T00:00:00"},
+            {"status": "response", "at": "2025-01-05T00:00:00"},
+        ],
+    },
+    {
+        "application_id": "r2",
+        "job_id": "job-A",
+        "status_history": [
+            {"status": "applied", "at": "2025-01-02T00:00:00"},
+            {"status": "interview", "at": "2025-01-06T00:00:00"},
+        ],
+    },
+    {
+        "application_id": "r3",
+        "job_id": "job-A",
+        "status_history": [
+            {"status": "applied", "at": "2025-01-03T00:00:00"},
+        ],
+    },
+    {
+        "application_id": "r4",
+        "job_id": "job-B",  # different archetype
+        "status_history": [
+            {"status": "interview", "at": "2025-01-07T00:00:00"},
+        ],
+    },
+]
+
+
+class TestComputeOutcomeRates:
+    def test_no_applications_returns_zeros(self) -> None:
+        """No applications at all → both rates are 0.0."""
+        rates = compute_outcome_rates([], ["job-A"])
+        assert rates["response_rate"] == 0.0
+        assert rates["interview_rate"] == 0.0
+
+    def test_no_matching_applications_returns_zeros(self) -> None:
+        """Applications exist but none belong to the archetype → zeros."""
+        rates = compute_outcome_rates(_APPS_FOR_RATES, ["job-Z"])
+        assert rates["response_rate"] == 0.0
+        assert rates["interview_rate"] == 0.0
+
+    def test_response_rate_exact(self) -> None:
+        """2 of 3 job-A apps have a response/interview/offer/accepted status → 2/3."""
+        rates = compute_outcome_rates(_APPS_FOR_RATES, ["job-A"])
+        # r1 has 'response' (counts), r2 has 'interview' (counts), r3 has only 'applied'.
+        assert rates["response_rate"] == pytest.approx(2.0 / 3.0)
+
+    def test_interview_rate_exact(self) -> None:
+        """Only r2 has interview status among 3 job-A apps → 1/3."""
+        rates = compute_outcome_rates(_APPS_FOR_RATES, ["job-A"])
+        assert rates["interview_rate"] == pytest.approx(1.0 / 3.0)
+
+    def test_excludes_other_archetype_apps(self) -> None:
+        """job-B app (with interview) must not affect job-A rates."""
+        rates_a = compute_outcome_rates(_APPS_FOR_RATES, ["job-A"])
+        rates_all = compute_outcome_rates(_APPS_FOR_RATES, ["job-A", "job-B"])
+        # Rates for A-only archetype must not be polluted by job-B.
+        assert rates_a["interview_rate"] == pytest.approx(1.0 / 3.0)
+        # Combined (4 apps: r1 response, r2 interview, r3 nothing, r4 interview)
+        # response_rate = 3/4 (r1, r2, r4 all meet response threshold), interview = 2/4
+        assert rates_all["response_rate"] == pytest.approx(3.0 / 4.0)
+        assert rates_all["interview_rate"] == pytest.approx(2.0 / 4.0)
+
+    def test_offer_status_counts_for_both_rates(self) -> None:
+        """'offer' satisfies both response and interview thresholds."""
+        apps = [
+            {
+                "application_id": "o1",
+                "job_id": "job-X",
+                "status_history": [{"status": "offer", "at": "2025-02-01T00:00:00"}],
+            }
+        ]
+        rates = compute_outcome_rates(apps, ["job-X"])
+        assert rates["response_rate"] == pytest.approx(1.0)
+        assert rates["interview_rate"] == pytest.approx(1.0)
+
+    def test_accepted_status_counts_for_both_rates(self) -> None:
+        """'accepted' satisfies both response and interview thresholds."""
+        apps = [
+            {
+                "application_id": "a1",
+                "job_id": "job-X",
+                "status_history": [{"status": "accepted", "at": "2025-02-01T00:00:00"}],
+            }
+        ]
+        rates = compute_outcome_rates(apps, ["job-X"])
+        assert rates["response_rate"] == pytest.approx(1.0)
+        assert rates["interview_rate"] == pytest.approx(1.0)
+
+    def test_empty_status_history_counts_as_no_response(self) -> None:
+        """App with empty status_history contributes to total but not rates."""
+        apps = [
+            {
+                "application_id": "e1",
+                "job_id": "job-X",
+                "status_history": [],
+            },
+            {
+                "application_id": "e2",
+                "job_id": "job-X",
+                "status_history": [{"status": "response", "at": "2025-01-01T00:00:00"}],
+            },
+        ]
+        rates = compute_outcome_rates(apps, ["job-X"])
+        assert rates["response_rate"] == pytest.approx(0.5)
+        assert rates["interview_rate"] == pytest.approx(0.0)
+
+    def test_missing_status_history_key_handled(self) -> None:
+        """App dict without status_history key is treated as no history."""
+        apps = [
+            {
+                "application_id": "m1",
+                "job_id": "job-X",
+                # no status_history key at all
+            }
+        ]
+        rates = compute_outcome_rates(apps, ["job-X"])
+        assert rates["response_rate"] == 0.0
+        assert rates["interview_rate"] == 0.0
+
+    def test_reproducible_identical_input(self) -> None:
+        """Same inputs always produce the same output."""
+        r1 = compute_outcome_rates(_APPS_FOR_RATES, ["job-A"])
+        r2 = compute_outcome_rates(_APPS_FOR_RATES, ["job-A"])
+        assert r1 == r2
+
+    def test_return_keys_present(self) -> None:
+        """Result always has response_rate and interview_rate keys."""
+        rates = compute_outcome_rates([], ["job-A"])
+        assert "response_rate" in rates
+        assert "interview_rate" in rates

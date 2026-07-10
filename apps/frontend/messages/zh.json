@@ -1156,9 +1156,12 @@
     "card": {
       "attraction": "吸引力",
       "fit": "匹配度",
+      "responseRate": "回复率",
+      "interviewRate": "面试率",
       "gaps": "主要差距",
       "jdCount": "职位"
     },
+    "staleReportBanner": "报告已过时 — 自上次报告以来有{count}个新申请",
     "advice": {
       "title": "战略建议",
       "unverified": "AI 生成 · 未经验证"

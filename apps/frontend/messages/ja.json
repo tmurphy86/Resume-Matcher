@@ -1156,9 +1156,12 @@
     "card": {
       "attraction": "魅力度",
       "fit": "適合度",
+      "responseRate": "返答率",
+      "interviewRate": "面接率",
       "gaps": "主要なギャップ",
       "jdCount": "件"
     },
+    "staleReportBanner": "レポートが古くなっています — 前回のレポート以降{count}件の新規応募",
     "advice": {
       "title": "戦略的アドバイス",
       "unverified": "AI生成 · 未検証"
