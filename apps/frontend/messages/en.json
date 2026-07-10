@@ -387,6 +387,10 @@
         "vivid": {
           "name": "Vivid",
           "description": "Colorful two-column layout with accent headers and arrow bullets"
+        },
+        "murphy": {
+          "name": "Murphy",
+          "description": "Black header bar, gray competency band, compact small-caps sections"
         }
       },
       "accentColor": "Accent Color",

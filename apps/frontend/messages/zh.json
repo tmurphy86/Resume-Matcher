@@ -387,6 +387,10 @@
         "vivid": {
           "name": "鲜明",
           "description": "彩色双栏布局，强调色标题与箭头项目符号"
+        },
+        "murphy": {
+          "name": "Murphy",
+          "description": "黑色标题栏，灰色能力栏，紧凑小型大写字母栏目"
         }
       },
       "accentColor": "强调色",

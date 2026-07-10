@@ -150,9 +150,21 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
         name: t('builder.formatting.templates.vivid.name'),
         description: t('builder.formatting.templates.vivid.description'),
       },
+      murphy: {
+        name: t('builder.formatting.templates.murphy.name'),
+        description: t('builder.formatting.templates.murphy.description'),
+      },
     }),
     [t]
   );
+
+  const getTemplateLabel = (templateId: string) => {
+    const label = templateLabels[templateId as TemplateType];
+    if (!label) {
+      return { name: templateId, description: '' };
+    }
+    return label;
+  };
 
   const getFontLabel = (font: HeaderFontFamily | BodyFontFamily) => {
     if (font === 'sans-serif') return t('builder.formatting.fontNames.sans');
@@ -198,7 +210,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                       ? 'border-blue-700 bg-white shadow-[2px_2px_0px_0px_#1D4ED8]'
                       : 'border-black bg-white hover:bg-paper-tint hover:shadow-sw-xs'
                   }`}
-                  title={templateLabels[template.id].description}
+                  title={getTemplateLabel(template.id).description}
                 >
                   <div className="w-12 h-16 mb-1.5 flex items-center justify-center">
                     <TemplateThumbnail
@@ -211,7 +223,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                       settings.template === template.id ? 'text-blue-700' : 'text-ink-soft'
                     }`}
                   >
-                    {templateLabels[template.id].name}
+                    {getTemplateLabel(template.id).name}
                   </span>
                 </button>
               ))}
