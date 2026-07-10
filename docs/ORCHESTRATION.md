@@ -3,11 +3,12 @@
 > You (Claude Code main session, Sonnet) are the engineering lead. The program lead is the Resume Hulk Cowork project (Fable). Full workflow rationale lives there; this file is your operating manual.
 
 ## Session loop
-1. Read `docs/PROJECT_STATE.md` and `docs/BACKLOG.md` before anything else.
-2. Work tickets top-down, respecting `Depends:`. Dispatch each to the agent named in the ticket (default `coder`). Give workers ONLY the ticket text + the files it lists — never whole-repo context.
-3. After each worker finishes: dispatch `reviewer` on the diff, then run the ticket's test command yourself. Both must pass before commit.
-4. One commit per ticket, conventional commits, ticket ID in the message (`feat(facts): RH-101 facts table + CRUD`).
-5. End of session: update `docs/PROJECT_STATE.md` (shipped / in-flight / blockers / DECISION NEEDED / session log) and commit it.
+1. Read `docs/ISSUES.md` first, then `docs/PROJECT_STATE.md` and `docs/BACKLOG.md`.
+2. **Bug gate:** triage every `status: new` issue into a BUG ticket (top of BACKLOG, `## BUGS` section). While ANY bug ticket is open, dispatch ONLY bug tickets — no feature work. Every bug fix ships with a regression test that fails on pre-fix code. Update the issue's status (`triaged (BUG-###)` → `fixed (commit)`); never delete entries.
+3. Work tickets top-down, respecting `Depends:`. Dispatch each to the agent named in the ticket (default `coder`). Give workers ONLY the ticket text + the files it lists — never whole-repo context.
+4. After each worker finishes: dispatch `reviewer` on the diff, then run the ticket's test command yourself. Both must pass before commit. Reviewer checks the diff against the BACKLOG ticket's FULL acceptance criteria, not the worker's summary; partial delivery is recorded as "partially shipped, criterion X deferred" — never ✅.
+5. One commit per ticket, conventional commits, ticket ID in the message (`feat(facts): RH-101 facts table + CRUD`; bug fixes: `fix(tracker): BUG-001 ...`).
+6. End of session: update `docs/PROJECT_STATE.md` (shipped / in-flight / blockers / DECISION NEEDED / session log) and `docs/ISSUES.md` statuses, and commit.
 
 ## Hard rules
 - Never guess on items marked DECISION NEEDED — record in PROJECT_STATE.md for the program lead and move on to an unblocked ticket.

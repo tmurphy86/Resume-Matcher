@@ -2,6 +2,52 @@
 
 > Written/prioritized by the program lead (Cowork). Consumed top-down by the Claude Code eng lead.
 > Ticket rules: one module focus, executable acceptance criteria, explicit out-of-scope. See docs/ORCHESTRATION.md.
+> **BUG GATE: while any ticket in `## BUGS` is open, feature tickets must not be dispatched.** Bugs come from docs/ISSUES.md (human testing). Every fix ships a regression test that fails on pre-fix code.
+
+## BUGS (open — blocks all feature work)
+
+### BUG-001: GET /api/applications 500s — tracker and career pages cannot load
+**Assign:** senior-coder (sonnet) **Source:** ISSUES.md "Application tracker couldn't load applications"
+**Goal:** Applications list loads for ALL row shapes (legacy pre-P3, considering w/ NULL resume_id, with/without status_history).
+**Files:** `apps/backend/app/routers/applications.py`, `apps/backend/app/database.py`, tests; secondary: `apps/frontend/app/(default)/career/page.tsx` + `lib/api/career.ts` (career page must not surface tracker-worded errors for reports)
+**Triage hint:** backend logs have the real error (generic-500 pattern); prime suspects are RH-307 lazy status_history backfill or list serialization on legacy/NULL-resume rows.
+**Acceptance criteria:**
+- [ ] Root cause identified and stated in the report (from server logs, not guessed)
+- [ ] Regression test seeds the failing row shape(s) directly in SQLite and asserts `GET /api/applications` 200s — test fails on pre-fix code
+- [ ] Career reports load errors display career-specific message
+**Test:** `cd apps/backend && uv run pytest tests/integration -k application`
+
+### BUG-002: Builder crashes — murphy missing from templateLabels
+**Assign:** coder (haiku) **Source:** ISSUES.md "Can't edit the resume"
+**Goal:** Builder renders for every registered template.
+**Files:** `apps/frontend/components/builder/formatting-controls.tsx` (+ wherever `templateLabels` is defined), locales if labels are i18n, `apps/frontend/tests/`
+**Triage hint (confirmed by inspection):** `templateLabels[template.id].description` at line 201 — `murphy` is in `TEMPLATE_OPTIONS` (RH-207) but absent from `templateLabels`.
+**Acceptance criteria:**
+- [ ] `murphy` label entry added; map made defensive (missing label → fallback, no crash)
+- [ ] Regression test renders FormattingControls iterating ALL `TEMPLATE_OPTIONS` ids — fails on pre-fix code
+- [ ] All 6 locales if labels are localized
+**Test:** `cd apps/frontend && npm run test && npm run lint`
+
+### BUG-003: Fact extraction renders empty review list
+**Assign:** senior-coder (sonnet) **Source:** ISSUES.md "Extracting facts renders with no facts yet"
+**Goal:** Extraction candidates reliably appear for review, or the user sees the real reason they can't.
+**Files:** `apps/backend/app/services/fact_extractor.py`, `apps/backend/app/routers/facts.py`, `apps/frontend/app/(default)/facts/page.tsx`, `apps/frontend/lib/api/facts.ts`, tests
+**Triage hint:** reproduce first (network capture of `/facts/extract` response). Candidate layers: response-shape mismatch with `lib/api/facts.ts`; page filtering out annotated duplicates; silent extraction failure. Fix the layer that's actually broken; add error surfacing so silent-empty is impossible (empty result must say why: no master, LLM parse failed, all duplicates).
+**Acceptance criteria:**
+- [ ] Root cause stated in report with repro evidence
+- [ ] Regression test at the broken layer — fails on pre-fix code
+- [ ] Empty states are explicit: distinct messages for "no master resume", "extraction failed", "all candidates were duplicates"
+**Test:** `cd apps/backend && uv run pytest tests/service/test_fact_extractor.py && cd ../frontend && npm run test`
+
+### BUG-004: Regression sweep — human-path smoke tests
+**Assign:** senior-coder (sonnet) **Depends:** BUG-001..003
+**Goal:** The class of bug Tim keeps finding (page-level integration breaks that unit suites miss) gets automated coverage.
+**Files:** `apps/frontend/tests/pages/` (new), `apps/backend/tests/integration/test_smoke_paths.py` (new)
+**Acceptance criteria:**
+- [ ] Frontend smoke render test per main page (dashboard, builder, tailor, tracker, facts, career) with realistic mocked API payloads — mounted without error boundary triggering
+- [ ] Backend smoke: seeded DB (master resume w/ blocks, legacy resume, considering app, pre-P3 app) → every GET list/detail endpoint returns 2xx
+- [ ] Both suites wired into default test commands (pre-push gate picks them up)
+**Test:** `cd apps/backend && uv run pytest tests/integration/test_smoke_paths.py && cd ../frontend && npm run test`
 
 ## P1 — Fact base, variants, provenance, interest signals
 
@@ -295,5 +341,50 @@
 - [ ] Career page shows a "report stale — N new applications since last report" banner when ≥5 applications post-date the latest report (client-side check; no scheduler)
 **Test:** `cd apps/backend && uv run pytest tests/unit/test_career_scores.py && cd ../frontend && npm run test`
 
+## P4 — Job intake + outreach (BLOCKED until `## BUGS` is empty)
+
+### RH-401: Thank-you / follow-up email mode on cover-letter module
+**Size:** S **Assign:** coder (haiku) **Depends:** bug gate clear
+**Goal:** Reuse the cover-letter generator for post-interview thank-you and follow-up emails.
+**Files:** `apps/backend/app/prompts/` (new template), `apps/backend/app/services/cover_letter.py` (mode param), router, frontend surface next to existing cover-letter UI (tracker card modal action), locales, tests
+**Acceptance criteria:**
+- [ ] `mode: cover_letter | thank_you | follow_up` — thank_you/follow_up produce short email-shaped output (subject + body), grounded in application record (company, role, status) + facts; no fabricated interview details (references only data present)
+- [ ] Tracker card action "Draft thank-you / follow-up" for applications at `response`+ statuses
+- [ ] Canned-LLM tests per mode; all 6 locales
+**Test:** `cd apps/backend && uv run pytest tests/service -k cover_letter && cd ../frontend && npm run test`
+
+### RH-402: JD library view
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** bug gate clear
+**Goal:** Browse/search all captured JDs and their parsed structure; the corpus becomes visible.
+**Files:** `apps/frontend/app/(default)/jobs/` (new page), `apps/frontend/lib/api/jobs.ts`, backend `routers/jobs.py` (list w/ parsed summaries + archetype membership), locales, tests
+**Acceptance criteria:**
+- [ ] List w/ company/role/level/capture date/archetype badge (from latest career report), filter by archetype + text search
+- [ ] Detail: raw JD + parsed responsibilities/requirements side-by-side; links to its applications
+- [ ] All 6 locales; lint + tests pass
+**Test:** `cd apps/frontend && npm run test && cd ../backend && uv run pytest tests/integration -k jobs`
+
+### RH-403: JobSpy intake (Indeed/Glassdoor/Google)
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-402 **DECISION pre-resolved:** `python-jobspy` dependency approved (program lead). LinkedIn source stays disabled — ToS posture per SPEC.
+**Goal:** Search job boards from inside the app; import selected postings as jobs (parsed) + considering cards.
+**Files:** `apps/backend/pyproject.toml` (add python-jobspy), `apps/backend/app/services/job_search.py` (new), `apps/backend/app/routers/jobs.py` (search + import endpoints), frontend search UI on jobs page, locales, tests
+**Constraints:** Search is user-triggered only (no schedulers/polling); scraping failures degrade gracefully (partial results + per-source error notes); NO network calls in tests (mock jobspy).
+**Acceptance criteria:**
+- [ ] `POST /api/jobs/search` {term, location?, sources[]} → normalized results (title, company, location, snippet, url, source)
+- [ ] "Import" on a result → Job (content=description, parsed via RH-303 path) + considering card (RH-106 path), deduped by source URL
+- [ ] Source failures reported per-source, never a whole-request 500
+- [ ] Mocked tests: normalization, import dedup, partial failure
+**Test:** `cd apps/backend && uv run pytest tests/service/test_job_search.py`
+
+### RH-404: Multi-JD tailoring (archetype resume)
+**Size:** M **Assign:** senior-coder (sonnet) **Depends:** RH-402
+**Goal:** Tailor one resume against an archetype's JD cluster instead of a single JD.
+**Files:** `apps/backend/app/services/improver.py` (multi-JD context path), `apps/backend/app/prompts/` (aggregate variant of DIFF_IMPROVE_PROMPT), `apps/backend/app/routers/resumes.py`, career page "Tailor for this archetype" action, locales, tests
+**Constraints:** Reuses the full provenance pipeline (facts injected, fact_ids required, unverified segregated) — no parallel code path.
+**Acceptance criteria:**
+- [ ] `POST /api/resumes/improve-multi` {resume_id, archetype (jd_ids[])} → aggregated requirements (frequency-weighted) drive one diff pass; provenance + unverified in response as in RH-201
+- [ ] Career page archetype card action launches it; result opens in standard tailor view
+- [ ] Canned-LLM tests: aggregation weighting, provenance intact
+**Test:** `cd apps/backend && uv run pytest tests/service -k improver`
+
 ## Icebox
-JobSpy intake, JD library, multi-JD tailoring (P4) · thank-you email prompt profile on cover-letter module (P4) · styled "pretty docx" (per ADR-004)
+Styled "pretty docx" (per ADR-004) · scheduled/background job search · LinkedIn intake (excluded per SPEC)
