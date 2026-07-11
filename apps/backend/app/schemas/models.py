@@ -525,6 +525,18 @@ class JobUploadResponse(BaseModel):
     request: dict[str, Any]
 
 
+class JobSummary(BaseModel):
+    """Summary of a job description for the library list view."""
+
+    job_id: str
+    snippet: str
+    created_at: str
+    company: str | None = None
+    role: str | None = None
+    level: str | None = None
+    archetype: str | None = None
+
+
 # Improvement Models
 class ImproveResumeRequest(BaseModel):
     """Request to improve/tailor a resume."""

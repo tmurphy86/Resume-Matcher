@@ -47,7 +47,8 @@
     "goToSettings": "Accéder aux paramètres",
     "applicationTracker": "Suivi des candidatures",
     "facts": "Bibliothèque de faits",
-    "careerIntelligence": "Intelligence de carrière"
+    "careerIntelligence": "Intelligence de carrière",
+    "jobs": "Bibliothèque d'offres"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1129,6 +1130,30 @@
       "existingFact": "Existant : ",
       "confirmImport": "Ajouter les nouveaux faits",
       "noResumes": "Aucun autre CV disponible"
+    }
+  },
+  "jobs": {
+    "title": "Bibliothèque d'offres",
+    "subtitle": "Parcourez et recherchez les offres d'emploi capturées.",
+    "searchPlaceholder": "Rechercher des offres d'emploi...",
+    "filterByArchetype": "Filtrer par archétype",
+    "allArchetypes": "Tous les archétypes",
+    "capturedOn": "Capturé le",
+    "viewApplications": "Voir les candidatures",
+    "noApplications": "Aucune candidature pour l'instant",
+    "empty": "Aucune offre d'emploi capturée. Téléchargez-en une depuis la page Adapter.",
+    "emptyFiltered": "Aucune offre ne correspond à votre recherche.",
+    "detail": {
+      "rawJd": "Offre brute",
+      "responsibilities": "Responsabilités",
+      "requirements": "Exigences",
+      "noParsed": "Structure analysée pas encore disponible.",
+      "applicationsLinked": "Candidatures",
+      "close": "Fermer"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des offres.",
+      "detailFailed": "Échec du chargement des détails de l'offre."
     }
   },
   "career": {

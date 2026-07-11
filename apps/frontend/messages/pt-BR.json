@@ -47,7 +47,8 @@
     "goToSettings": "Ir para Configurações",
     "applicationTracker": "Acompanhamento de candidaturas",
     "facts": "Biblioteca de fatos",
-    "careerIntelligence": "Inteligência de carreira"
+    "careerIntelligence": "Inteligência de carreira",
+    "jobs": "Biblioteca de vagas"
   },
   "dashboard": {
     "title": "Painel",
@@ -1129,6 +1130,30 @@
       "projectFollowUps": "Perguntas sobre projetos",
       "skillGaps": "Lacunas de habilidades",
       "talkingPoints": "Pontos de conversa"
+    }
+  },
+  "jobs": {
+    "title": "Biblioteca de vagas",
+    "subtitle": "Navegue e pesquise as descrições de emprego capturadas.",
+    "searchPlaceholder": "Pesquisar descrições de emprego...",
+    "filterByArchetype": "Filtrar por arquétipo",
+    "allArchetypes": "Todos os arquétipos",
+    "capturedOn": "Capturado em",
+    "viewApplications": "Ver candidaturas",
+    "noApplications": "Sem candidaturas ainda",
+    "empty": "Nenhuma descrição de emprego capturada ainda. Envie uma na página Adaptar.",
+    "emptyFiltered": "Nenhuma vaga corresponde à sua pesquisa.",
+    "detail": {
+      "rawJd": "Vaga original",
+      "responsibilities": "Responsabilidades",
+      "requirements": "Requisitos",
+      "noParsed": "Estrutura analisada ainda não disponível.",
+      "applicationsLinked": "Candidaturas",
+      "close": "Fechar"
+    },
+    "errors": {
+      "loadFailed": "Falha ao carregar vagas.",
+      "detailFailed": "Falha ao carregar detalhes da vaga."
     }
   },
   "career": {

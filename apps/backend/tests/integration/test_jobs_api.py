@@ -83,3 +83,123 @@ class TestGetJob:
         async with client:
             resp = await client.get("/api/v1/jobs/nonexistent")
         assert resp.status_code == 404
+
+
+class TestListJobs:
+    """GET /api/v1/jobs"""
+
+    async def test_empty_db_returns_empty_list(self, isolated_db):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    async def test_returns_snippet_not_full_content(self, isolated_db):
+        long_content = "x" * 500
+        await isolated_db.create_job(content=long_content)
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert len(data[0]["snippet"]) == 200
+        assert "content" not in data[0]
+
+    async def test_text_search_q_filters_by_content(self, isolated_db):
+        await isolated_db.create_job(content="Senior Python Engineer at MegaCorp")
+        await isolated_db.create_job(content="Frontend Designer React UI")
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs?q=python")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert "MegaCorp" in data[0]["snippet"]
+
+    async def test_q_is_case_insensitive(self, isolated_db):
+        await isolated_db.create_job(content="Senior PYTHON Developer")
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs?q=Python")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    async def test_archetype_filter_excludes_unassigned(self, isolated_db):
+        # No career report -> no archetype assignment -> archetype filter returns nothing.
+        await isolated_db.create_job(content="Backend role at SomeCo")
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs?archetype=Backend")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    async def test_archetype_filter_with_career_report(self, isolated_db):
+        job1 = await isolated_db.create_job(content="Backend role at Alpha")
+        job2 = await isolated_db.create_job(content="Frontend role at Beta")
+        await isolated_db.create_career_report(
+            archetypes_json=[
+                {
+                    "name": "Backend",
+                    "description": "be",
+                    "jd_ids": [job1["job_id"]],
+                    "responsibilities": [],
+                },
+                {
+                    "name": "Frontend",
+                    "description": "fe",
+                    "jd_ids": [job2["job_id"]],
+                    "responsibilities": [],
+                },
+            ],
+            jd_ids_json=[job1["job_id"], job2["job_id"]],
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs?archetype=Backend")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["archetype"] == "Backend"
+
+    async def test_archetype_populated_from_latest_report(self, isolated_db):
+        job = await isolated_db.create_job(content="SRE role at Infra Inc")
+        await isolated_db.create_career_report(
+            archetypes_json=[
+                {
+                    "name": "SRE",
+                    "description": "ops",
+                    "jd_ids": [job["job_id"]],
+                    "responsibilities": [],
+                },
+            ],
+            jd_ids_json=[job["job_id"]],
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data[0]["archetype"] == "SRE"
+
+    async def test_get_job_detail_includes_application_ids(self, isolated_db):
+        job = await isolated_db.create_job(content="PM role at WidgetCo")
+        app_row = await isolated_db.create_application(
+            job_id=job["job_id"], company="WidgetCo", role="PM"
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(f"/api/v1/jobs/{job['job_id']}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "application_ids" in data
+        assert app_row["application_id"] in data["application_ids"]

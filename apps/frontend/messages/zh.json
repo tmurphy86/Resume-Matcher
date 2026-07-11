@@ -47,7 +47,8 @@
     "goToSettings": "前往设置",
     "applicationTracker": "申请追踪",
     "facts": "事实库",
-    "careerIntelligence": "职业智能"
+    "careerIntelligence": "职业智能",
+    "jobs": "职位描述库"
   },
   "dashboard": {
     "title": "仪表板",
@@ -1129,6 +1130,30 @@
       "projectFollowUps": "项目追问",
       "skillGaps": "技能差距",
       "talkingPoints": "沟通要点"
+    }
+  },
+  "jobs": {
+    "title": "职位描述库",
+    "subtitle": "浏览和搜索已保存的职位描述。",
+    "searchPlaceholder": "搜索职位描述...",
+    "filterByArchetype": "按职业类型筛选",
+    "allArchetypes": "所有职业类型",
+    "capturedOn": "捕获于",
+    "viewApplications": "查看申请",
+    "noApplications": "暂无申请",
+    "empty": "尚未捕获任何职位描述。请在定制页面上传一个。",
+    "emptyFiltered": "没有匹配的职位。",
+    "detail": {
+      "rawJd": "原始职位描述",
+      "responsibilities": "职责",
+      "requirements": "要求",
+      "noParsed": "解析结构尚不可用。",
+      "applicationsLinked": "申请",
+      "close": "关闭"
+    },
+    "errors": {
+      "loadFailed": "加载职位失败。",
+      "detailFailed": "加载职位详情失败。"
     }
   },
   "career": {

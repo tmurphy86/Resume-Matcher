@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Briefcase from 'lucide-react/dist/esm/icons/briefcase';
 import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import BrainCircuit from 'lucide-react/dist/esm/icons/brain-circuit';
@@ -79,6 +80,13 @@ export const SwissGrid = ({ children }: { children: React.ReactNode }) => {
             >
               <BrainCircuit className="w-4 h-4" />
               {t('nav.careerIntelligence')}
+            </Link>
+            <Link
+              href="/jobs"
+              className="inline-flex items-center justify-center gap-2 bg-background text-black border border-black px-6 py-2 uppercase font-bold tracking-wide shadow-sw-sm hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all min-w-[140px] text-center"
+            >
+              <Briefcase className="w-4 h-4" />
+              {t('nav.jobs')}
             </Link>
             <Link
               href="/settings"

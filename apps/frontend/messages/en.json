@@ -47,7 +47,8 @@
     "goToSettings": "Go to Settings",
     "applicationTracker": "Application Tracker",
     "facts": "Facts Library",
-    "careerIntelligence": "Career Intelligence"
+    "careerIntelligence": "Career Intelligence",
+    "jobs": "JD Library"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1129,6 +1130,30 @@
       "projectFollowUps": "Project Follow-Ups",
       "skillGaps": "Skill Gaps",
       "talkingPoints": "Talking Points"
+    }
+  },
+  "jobs": {
+    "title": "JD Library",
+    "subtitle": "Browse and search captured job descriptions.",
+    "searchPlaceholder": "Search job descriptions...",
+    "filterByArchetype": "Filter by archetype",
+    "allArchetypes": "All archetypes",
+    "capturedOn": "Captured",
+    "viewApplications": "View applications",
+    "noApplications": "No applications yet",
+    "empty": "No job descriptions captured yet. Upload one via the Tailor page.",
+    "emptyFiltered": "No jobs match your search.",
+    "detail": {
+      "rawJd": "Raw JD",
+      "responsibilities": "Responsibilities",
+      "requirements": "Requirements",
+      "noParsed": "Parsed structure not available yet.",
+      "applicationsLinked": "Applications",
+      "close": "Close"
+    },
+    "errors": {
+      "loadFailed": "Failed to load jobs.",
+      "detailFailed": "Failed to load job details."
     }
   },
   "career": {

@@ -47,7 +47,8 @@
     "goToSettings": "Ir a Configuración",
     "applicationTracker": "Seguimiento de candidaturas",
     "facts": "Biblioteca de hechos",
-    "careerIntelligence": "Inteligencia de carrera"
+    "careerIntelligence": "Inteligencia de carrera",
+    "jobs": "Biblioteca de ofertas"
   },
   "dashboard": {
     "title": "Panel",
@@ -1129,6 +1130,30 @@
       "projectFollowUps": "Seguimiento de proyectos",
       "skillGaps": "Brechas de habilidades",
       "talkingPoints": "Puntos clave"
+    }
+  },
+  "jobs": {
+    "title": "Biblioteca de ofertas",
+    "subtitle": "Explora y busca las descripciones de trabajo capturadas.",
+    "searchPlaceholder": "Buscar descripciones de trabajo...",
+    "filterByArchetype": "Filtrar por arquetipo",
+    "allArchetypes": "Todos los arquetipos",
+    "capturedOn": "Capturado",
+    "viewApplications": "Ver candidaturas",
+    "noApplications": "Sin candidaturas aún",
+    "empty": "Aún no se han capturado descripciones de trabajo. Sube una desde la página Adaptar.",
+    "emptyFiltered": "Ningún trabajo coincide con tu búsqueda.",
+    "detail": {
+      "rawJd": "Descripción original",
+      "responsibilities": "Responsabilidades",
+      "requirements": "Requisitos",
+      "noParsed": "Estructura analizada no disponible aún.",
+      "applicationsLinked": "Candidaturas",
+      "close": "Cerrar"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar los trabajos.",
+      "detailFailed": "Error al cargar los detalles del trabajo."
     }
   },
   "career": {

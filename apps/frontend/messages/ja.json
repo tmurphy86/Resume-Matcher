@@ -47,7 +47,8 @@
     "goToSettings": "設定へ",
     "applicationTracker": "応募トラッカー",
     "facts": "ファクトライブラリ",
-    "careerIntelligence": "キャリアインテリジェンス"
+    "careerIntelligence": "キャリアインテリジェンス",
+    "jobs": "JDライブラリ"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1129,6 +1130,30 @@
       "projectFollowUps": "プロジェクト深掘り質問",
       "skillGaps": "スキルギャップ",
       "talkingPoints": "話すべき要点"
+    }
+  },
+  "jobs": {
+    "title": "JDライブラリ",
+    "subtitle": "保存された求人票を閲覧・検索します。",
+    "searchPlaceholder": "求人票を検索...",
+    "filterByArchetype": "アーキタイプで絞り込む",
+    "allArchetypes": "すべてのアーキタイプ",
+    "capturedOn": "取得日",
+    "viewApplications": "応募を見る",
+    "noApplications": "まだ応募はありません",
+    "empty": "求人票はまだキャプチャされていません。テーラーページからアップロードしてください。",
+    "emptyFiltered": "検索条件に一致する求人はありません。",
+    "detail": {
+      "rawJd": "元の求人票",
+      "responsibilities": "職務内容",
+      "requirements": "応募要件",
+      "noParsed": "解析された構造はまだ利用できません。",
+      "applicationsLinked": "応募",
+      "close": "閉じる"
+    },
+    "errors": {
+      "loadFailed": "求人の読み込みに失敗しました。",
+      "detailFailed": "求人詳細の読み込みに失敗しました。"
     }
   },
   "career": {
