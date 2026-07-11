@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import {
   type ArchetypeScore,
 } from '@/lib/api/career';
 import { type Application } from '@/lib/api/tracker';
+import { improveMulti } from '@/lib/api/resume';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -367,6 +369,7 @@ function ReportHistoryItem({ report, isActive, onClick }: ReportHistoryItemProps
 export default function CareerPage() {
   const { t } = useTranslations();
 
+  const router = useRouter();
   const [reports, setReports] = useState<CareerReport[]>([]);
   const [activeReport, setActiveReport] = useState<CareerReport | null>(null);
   const [applications, setApplications] = useState<ApplicationWithHistory[]>([]);
@@ -375,6 +378,8 @@ export default function CareerPage() {
   const [generating, setGenerating] = useState(false);
   const [clustering, setClustering] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
+  const [tailoringArchetype, setTailoringArchetype] = useState<string | null>(null);
 
   // ── Load reports on mount ─────────────────────────────────────────────────
   const loadReports = useCallback(async () => {
@@ -409,6 +414,31 @@ export default function CareerPage() {
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  useEffect(() => {
+    const id = localStorage.getItem('master_resume_id');
+    setMasterResumeId(id);
+  }, []);
+
+  const handleTailor = async (archetypeName: string, jdIds: string[]) => {
+    if (!masterResumeId) return;
+    setTailoringArchetype(archetypeName);
+    setActionError(null);
+    try {
+      const result = await improveMulti({
+        resume_id: masterResumeId,
+        archetype_name: archetypeName,
+        jd_ids: jdIds,
+      });
+      localStorage.setItem('pendingImprovePreview', JSON.stringify(result));
+      router.push('/tailor');
+    } catch (err) {
+      console.error('Multi-JD tailoring failed:', err);
+      setActionError(t('career.tailorError'));
+    } finally {
+      setTailoringArchetype(null);
+    }
+  };
 
   // ── Cluster archetypes ────────────────────────────────────────────────────
   const handleCluster = async () => {
@@ -584,14 +614,28 @@ export default function CareerPage() {
                             (a) => a.name === score.archetype_name
                           );
                           const rates = computeOutcomeRates(applications, archetype?.jd_ids ?? []);
+                          const isTailoring = tailoringArchetype === score.archetype_name;
                           return (
-                            <ArchetypeCard
-                              key={score.archetype_name}
-                              score={score}
-                              jdCount={archetype?.jd_ids.length ?? 0}
-                              responseRate={rates.responseRate}
-                              interviewRate={rates.interviewRate}
-                            />
+                            <div key={score.archetype_name} className="flex flex-col gap-2">
+                              <ArchetypeCard
+                                score={score}
+                                jdCount={archetype?.jd_ids.length ?? 0}
+                                responseRate={rates.responseRate}
+                                interviewRate={rates.interviewRate}
+                              />
+                              <button
+                                type="button"
+                                disabled={!masterResumeId || isTailoring}
+                                onClick={() =>
+                                  handleTailor(score.archetype_name, archetype?.jd_ids ?? [])
+                                }
+                                className="border border-black bg-background px-3 py-2 font-mono text-xs uppercase tracking-wider hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isTailoring
+                                  ? t('career.tailoringForArchetype')
+                                  : t('career.tailorForArchetype')}
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -603,25 +647,38 @@ export default function CareerPage() {
                         {t('career.archetypes.title')}
                       </h2>
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {activeReport.archetypes_json.map((archetype) => (
-                          <div
-                            key={archetype.name}
-                            className="border border-black bg-canvas shadow-[2px_2px_0px_black] p-4"
-                          >
-                            <h3 className="font-serif text-lg uppercase tracking-tight">
-                              {archetype.name}
-                            </h3>
-                            <p className="mt-1 font-mono text-xs text-ink-soft">
-                              {archetype.jd_ids.length} {t('career.card.jdCount')}
-                            </p>
-                            <p className="mt-2 text-sm leading-snug text-ink-soft">
-                              {archetype.description}
-                            </p>
-                            <div className="mt-2 font-mono text-[10px] uppercase text-warning">
-                              {t('career.archetypes.noScoresYet')}
+                        {activeReport.archetypes_json.map((archetype) => {
+                          const isTailoring = tailoringArchetype === archetype.name;
+                          return (
+                            <div
+                              key={archetype.name}
+                              className="flex flex-col gap-2 border border-black bg-canvas p-4 shadow-[2px_2px_0px_black]"
+                            >
+                              <h3 className="font-serif text-lg uppercase tracking-tight">
+                                {archetype.name}
+                              </h3>
+                              <p className="mt-1 font-mono text-xs text-ink-soft">
+                                {archetype.jd_ids.length} {t('career.card.jdCount')}
+                              </p>
+                              <p className="mt-2 text-sm leading-snug text-ink-soft">
+                                {archetype.description}
+                              </p>
+                              <div className="mt-2 font-mono text-[10px] uppercase text-warning">
+                                {t('career.archetypes.noScoresYet')}
+                              </div>
+                              <button
+                                type="button"
+                                disabled={!masterResumeId || isTailoring}
+                                onClick={() => handleTailor(archetype.name, archetype.jd_ids)}
+                                className="mt-2 border border-black bg-background px-3 py-2 font-mono text-xs uppercase tracking-wider hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isTailoring
+                                  ? t('career.tailoringForArchetype')
+                                  : t('career.tailorForArchetype')}
+                              </button>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -390,6 +390,16 @@ export async function retryProcessing(resumeId: string): Promise<ResumeUploadRes
   return res.json();
 }
 
+export interface ImproveMultiRequest {
+  resume_id: string;
+  archetype_name: string;
+  jd_ids: string[];
+}
+
+export async function improveMulti(request: ImproveMultiRequest): Promise<ImprovedResult> {
+  return postImprove('/resumes/improve-multi', request as unknown as Record<string, unknown>);
+}
+
 /** Fetches the job description used to tailor a resume */
 export async function fetchJobDescription(
   resumeId: string

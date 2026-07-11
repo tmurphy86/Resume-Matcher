@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "求人の読み込みに失敗しました。",
       "detailFailed": "求人詳細の読み込みに失敗しました。"
+    },
+    "search": {
+      "title": "求人検索",
+      "termPlaceholder": "职種またはキーワード",
+      "locationPlaceholder": "場所（任意）",
+      "sources": "ソース",
+      "searchButton": "検索",
+      "importing": "インポート中…",
+      "importButton": "ライブラリにインポート",
+      "imported": "インポート済み",
+      "noResults": "結果が見つかりませんでした。",
+      "errors": {
+        "searchFailed": "検索に失敗しました。再試行してください。",
+        "importFailed": "インポートに失敗しました。再試行してください。",
+        "partialFailure": "一部のソースにエラーが発生しました。"
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "キャリアレポートの読み込みに失敗しました。",
       "clusterFailed": "クラスタリングに失敗しました。求人票が保存されているか確認してください。",
       "generateFailed": "レポートの生成に失敗しました。もう一度お試しください。"
-    }
+    },
+    "tailorForArchetype": "履歴書をカスタマイズ →",
+    "tailoringForArchetype": "カスタマイズ中…",
+    "tailorError": "カスタマイズに失敗しました。再試行してください。"
   }
 }

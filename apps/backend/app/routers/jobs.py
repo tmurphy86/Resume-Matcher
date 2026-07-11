@@ -6,7 +6,16 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.database import db
-from app.schemas import JobUploadRequest, JobUploadResponse, JobSummary
+from app.schemas import (
+    JobImportRequest,
+    JobImportResponse,
+    JobSearchRequest,
+    JobSearchResponse,
+    JobSearchResult,
+    JobUploadRequest,
+    JobUploadResponse,
+    JobSummary,
+)
 from app.services.jd_parser import backfill_parse_jobs, parse_job_description
 
 logger = logging.getLogger(__name__)
@@ -135,6 +144,50 @@ async def list_jobs(
         )
 
     return summaries
+
+
+@router.post("/search", response_model=JobSearchResponse)
+async def search_jobs_endpoint(request: JobSearchRequest) -> JobSearchResponse:
+    """Search external job boards via JobSpy."""
+    try:
+        from app.services.job_search import search_jobs
+
+        data = await search_jobs(
+            term=request.term,
+            location=request.location,
+            sources=request.sources,
+        )
+        results = [JobSearchResult(**r) for r in data.get("results", [])]
+        return JobSearchResponse(results=results, errors=data.get("errors", {}))
+    except Exception as e:
+        logger.error(f"Job search failed: {e}")
+        raise HTTPException(status_code=500, detail="Job search failed. Please try again.")
+
+
+@router.post("/import", response_model=JobImportResponse)
+async def import_job(request: JobImportRequest) -> JobImportResponse:
+    """Import a job from an external source into the JD library."""
+    if not request.description.strip():
+        raise HTTPException(status_code=400, detail="Job description is required")
+    try:
+        job = await db.create_job(
+            content=request.description.strip(),
+            resume_id=None,
+        )
+        job_id = job["job_id"]
+        await db.update_job(
+            job_id,
+            {
+                "source_url": request.url,
+                "source": request.source,
+                "company": request.company,
+                "role": request.title,
+            },
+        )
+        return JobImportResponse(job_id=job_id, application_id=None)
+    except Exception as e:
+        logger.error(f"Job import failed: {e}")
+        raise HTTPException(status_code=500, detail="Job import failed. Please try again.")
 
 
 @router.get("/{job_id}")

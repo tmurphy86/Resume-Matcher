@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "加载职位失败。",
       "detailFailed": "加载职位详情失败。"
+    },
+    "search": {
+      "title": "找工作",
+      "termPlaceholder": "职位名称或关键词",
+      "locationPlaceholder": "地点（可选）",
+      "sources": "来源",
+      "searchButton": "搜索",
+      "importing": "导入中…",
+      "importButton": "导入到库",
+      "imported": "已导入",
+      "noResults": "未找到结果。",
+      "errors": {
+        "searchFailed": "搜索失败，请重试。",
+        "importFailed": "导入失败，请重试。",
+        "partialFailure": "部分来源返回了错误。"
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "加载职业报告失败。",
       "clusterFailed": "聚类失败。请确保您已保存职位描述。",
       "generateFailed": "报告生成失败。请重试。"
-    }
+    },
+    "tailorForArchetype": "定制简历 →",
+    "tailoringForArchetype": "定制中…",
+    "tailorError": "定制失败，请重试。"
   }
 }

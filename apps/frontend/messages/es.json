@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "Error al cargar los trabajos.",
       "detailFailed": "Error al cargar los detalles del trabajo."
+    },
+    "search": {
+      "title": "Buscar empleos",
+      "termPlaceholder": "Título del puesto o palabras clave",
+      "locationPlaceholder": "Ubicación (opcional)",
+      "sources": "Fuentes",
+      "searchButton": "Buscar",
+      "importing": "Importando…",
+      "importButton": "Importar a la biblioteca",
+      "imported": "Importado",
+      "noResults": "No se encontraron resultados.",
+      "errors": {
+        "searchFailed": "Búsqueda fallida. Inténtelo de nuevo.",
+        "importFailed": "Importación fallida. Inténtelo de nuevo.",
+        "partialFailure": "Algunas fuentes devolvieron errores."
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "No se pudieron cargar los informes de carrera.",
       "clusterFailed": "La agrupación falló. Asegúrate de tener descripciones de trabajo guardadas.",
       "generateFailed": "La generación del informe falló. Por favor, inténtalo de nuevo."
-    }
+    },
+    "tailorForArchetype": "Personalizar currículum →",
+    "tailoringForArchetype": "Personalizando…",
+    "tailorError": "La personalización falló. Inténtelo de nuevo."
   }
 }

@@ -113,6 +113,18 @@ export default function TailorPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem('pendingImprovePreview');
+    if (!stored) return;
+    localStorage.removeItem('pendingImprovePreview');
+    try {
+      const parsed = JSON.parse(stored) as ImprovedResult;
+      setPendingResult(parsed);
+    } catch (err) {
+      console.error('Failed to parse pendingImprovePreview', err);
+    }
+  }, []);
+
   // Load master resume data to power the block variant editor
   useEffect(() => {
     if (!masterResumeId) return;

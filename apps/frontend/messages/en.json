@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "Failed to load jobs.",
       "detailFailed": "Failed to load job details."
+    },
+    "search": {
+      "title": "Find Jobs",
+      "termPlaceholder": "Job title or keywords",
+      "locationPlaceholder": "Location (optional)",
+      "sources": "Sources",
+      "searchButton": "Search",
+      "importing": "Importing…",
+      "importButton": "Import to library",
+      "imported": "Imported",
+      "noResults": "No results found.",
+      "errors": {
+        "searchFailed": "Search failed. Please try again.",
+        "importFailed": "Import failed. Please try again.",
+        "partialFailure": "Some sources returned errors."
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "Failed to load career reports.",
       "clusterFailed": "Clustering failed. Ensure you have saved job descriptions.",
       "generateFailed": "Report generation failed. Please try again."
-    }
+    },
+    "tailorForArchetype": "Tailor resume →",
+    "tailoringForArchetype": "Tailoring…",
+    "tailorError": "Tailoring failed. Please try again."
   }
 }

@@ -537,6 +537,49 @@ class JobSummary(BaseModel):
     archetype: str | None = None
 
 
+class JobSearchRequest(BaseModel):
+    """Request to search external job boards."""
+
+    term: str
+    location: str | None = None
+    sources: list[str] = Field(default_factory=lambda: ["linkedin", "indeed"])
+
+
+class JobSearchResult(BaseModel):
+    """A single external job search result."""
+
+    title: str
+    company: str
+    location: str
+    snippet: str
+    url: str
+    source: str
+
+
+class JobSearchResponse(BaseModel):
+    """Response from external job search."""
+
+    results: list[JobSearchResult]
+    errors: dict[str, str]
+
+
+class JobImportRequest(BaseModel):
+    """Request to import an external job into the library."""
+
+    url: str
+    source: str
+    title: str | None = None
+    company: str | None = None
+    description: str
+
+
+class JobImportResponse(BaseModel):
+    """Response from importing a job."""
+
+    job_id: str
+    application_id: str | None = None
+
+
 # Improvement Models
 class ImproveResumeRequest(BaseModel):
     """Request to improve/tailor a resume."""
@@ -544,6 +587,14 @@ class ImproveResumeRequest(BaseModel):
     resume_id: str
     job_id: str
     prompt_id: str | None = None
+
+
+class ImproveMultiRequest(BaseModel):
+    """Request to tailor a resume for an archetype (multiple JDs)."""
+
+    resume_id: str
+    archetype_name: str
+    jd_ids: list[str] = Field(min_length=1, description="JD IDs belonging to the archetype")
 
 
 class ImprovementSuggestion(BaseModel):

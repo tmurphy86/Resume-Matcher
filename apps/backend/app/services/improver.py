@@ -20,7 +20,7 @@ from app.prompts import (
     SKILL_TARGET_PLAN_PROMPT,
     get_language_name,
 )
-from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE
+from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE, MULTI_JD_DIFF_PROMPT
 from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary
 from app.schemas.models import ImproveDiffResult, ResumeChange
 
@@ -714,6 +714,88 @@ async def generate_resume_diffs(
         strategy_notes = "LLM output had no changes key — returned zero diffs"
         logger.warning("LLM output missing 'changes' key: %s", list(result.keys()))
 
+    return ImproveDiffResult(changes=changes, strategy_notes=strategy_notes)
+
+
+async def generate_multi_jd_diffs(
+    *,
+    original_resume: str,
+    original_resume_data: dict[str, Any] | None,
+    archetype_name: str,
+    job_descriptions: list[str],
+    language: str,
+    facts_section: str = "",
+    skill_targets: list[dict[str, Any]] | None = None,
+) -> ImproveDiffResult:
+    """Generate resume diffs optimized for a cluster of JDs (an archetype).
+
+    Aggregates requirements by frequency across all JDs and produces changes
+    that target the most common requirements.
+    """
+    output_language = get_language_name(language)
+
+    freq: dict[str, int] = {}
+    for jd in job_descriptions:
+        sanitized = _sanitize_user_input(jd)
+        for line in sanitized.splitlines():
+            stripped = line.strip()
+            if stripped and len(stripped) < 200:
+                freq[stripped] = freq.get(stripped, 0) + 1
+
+    sorted_lines = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:50]
+    aggregated = "\n".join(f"[{count} occurrences] {line}" for line, count in sorted_lines)
+
+    resume_input = (
+        json.dumps(original_resume_data) if original_resume_data is not None else original_resume
+    )
+
+    prompt = MULTI_JD_DIFF_PROMPT.format(
+        output_language=output_language,
+        archetype_name=archetype_name,
+        jd_count=len(job_descriptions),
+        aggregated_requirements=aggregated or "No requirements extracted.",
+        resume_content=resume_input,
+        facts_section=facts_section or "No verified facts available.",
+        skill_targets_section=_prepare_skill_targets_for_prompt(skill_targets),
+    )
+
+    result = await complete_json(
+        prompt=prompt,
+        system_prompt="You are an expert resume editor. Output only valid JSON with targeted changes.",
+        max_tokens=4096,
+        schema_type="diff",
+    )
+
+    raw_changes = result.get("changes", [])
+    if not isinstance(raw_changes, list):
+        logger.warning("LLM returned non-list changes: %s", type(raw_changes))
+        raw_changes = []
+
+    changes: list[ResumeChange] = []
+    for raw in raw_changes:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            raw_fact_ids = raw.get("fact_ids", [])
+            fact_ids: list[str] = (
+                [str(f) for f in raw_fact_ids if f]
+                if isinstance(raw_fact_ids, list)
+                else []
+            )
+            changes.append(
+                ResumeChange(
+                    path=str(raw.get("path", "")),
+                    action=raw.get("action", "replace"),
+                    original=raw.get("original"),
+                    value=raw.get("value", ""),
+                    reason=str(raw.get("reason", "")),
+                    fact_ids=fact_ids,
+                )
+            )
+        except Exception as e:
+            logger.warning("Skipping malformed change: %s — %s", raw, e)
+
+    strategy_notes = str(result.get("strategy_notes", ""))
     return ImproveDiffResult(changes=changes, strategy_notes=strategy_notes)
 
 

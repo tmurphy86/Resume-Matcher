@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "Échec du chargement des offres.",
       "detailFailed": "Échec du chargement des détails de l'offre."
+    },
+    "search": {
+      "title": "Trouver des offres",
+      "termPlaceholder": "Intitulé du poste ou mots-clés",
+      "locationPlaceholder": "Lieu (optionnel)",
+      "sources": "Sources",
+      "searchButton": "Rechercher",
+      "importing": "Importation…",
+      "importButton": "Importer dans la bibliothèque",
+      "imported": "Importé",
+      "noResults": "Aucun résultat trouvé.",
+      "errors": {
+        "searchFailed": "Recherche échouée. Veuillez réessayer.",
+        "importFailed": "Importation échouée. Veuillez réessayer.",
+        "partialFailure": "Certaines sources ont renvoyé des erreurs."
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "Échec du chargement des rapports de carrière.",
       "clusterFailed": "Le regroupement a échoué. Assurez-vous d'avoir des offres d'emploi sauvegardées.",
       "generateFailed": "La génération du rapport a échoué. Veuillez réessayer."
-    }
+    },
+    "tailorForArchetype": "Personnaliser le CV →",
+    "tailoringForArchetype": "Personnalisation…",
+    "tailorError": "La personnalisation a échoué. Veuillez réessayer."
   }
 }

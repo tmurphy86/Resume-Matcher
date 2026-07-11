@@ -1154,6 +1154,22 @@
     "errors": {
       "loadFailed": "Falha ao carregar vagas.",
       "detailFailed": "Falha ao carregar detalhes da vaga."
+    },
+    "search": {
+      "title": "Encontrar vagas",
+      "termPlaceholder": "Título do cargo ou palavras-chave",
+      "locationPlaceholder": "Local (opcional)",
+      "sources": "Fontes",
+      "searchButton": "Buscar",
+      "importing": "Importando…",
+      "importButton": "Importar para a biblioteca",
+      "imported": "Importado",
+      "noResults": "Nenhum resultado encontrado.",
+      "errors": {
+        "searchFailed": "Busca falhou. Tente novamente.",
+        "importFailed": "Importação falhou. Tente novamente.",
+        "partialFailure": "Algumas fontes retornaram erros."
+      }
     }
   },
   "career": {
@@ -1205,6 +1221,9 @@
       "loadFailed": "Falha ao carregar relatórios de carreira.",
       "clusterFailed": "O agrupamento falhou. Verifique se você tem descrições de vagas salvas.",
       "generateFailed": "A geração do relatório falhou. Por favor, tente novamente."
-    }
+    },
+    "tailorForArchetype": "Personalizar currículo →",
+    "tailoringForArchetype": "Personalizando…",
+    "tailorError": "A personalização falhou. Tente novamente."
   }
 }

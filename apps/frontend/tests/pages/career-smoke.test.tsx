@@ -24,10 +24,20 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/career',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/lib/api/tracker', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api/tracker')>();
   return { ...actual, listApplications: vi.fn().mockResolvedValue({ columns: mockColumns }) };
 });
+
+vi.mock('@/lib/api/resume', () => ({
+  improveMulti: vi.fn().mockResolvedValue({}),
+}));
 
 import CareerPage from '@/app/(default)/career/page';
 

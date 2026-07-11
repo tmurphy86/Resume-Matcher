@@ -749,3 +749,46 @@ Subject: Following up — [Role] at [Company]
 [email body]
 
 Output plain text only. No markdown formatting (except for the Subject: and --- separator)."""
+
+MULTI_JD_DIFF_PROMPT = """You are a resume tailoring expert. Tailor this resume for a cluster of similar job descriptions.
+
+IMPORTANT: Write all improvements in {output_language}.
+
+Archetype: {archetype_name}
+Number of JDs: {jd_count}
+
+AGGREGATED REQUIREMENTS (frequency-weighted):
+{aggregated_requirements}
+
+RESUME:
+{resume_content}
+
+{facts_section}
+
+Generate targeted changes to optimize this resume for the archetype. Focus on:
+1. Skills and technologies that appear in MULTIPLE job descriptions (higher frequency = higher priority)
+2. Experience framing that matches the archetype's typical requirements
+3. Measurable achievements relevant to this archetype
+
+{skill_targets_section}
+
+Return JSON matching the ImproveDiffResult schema:
+{{
+  "changes": [
+    {{
+      "path": "dot.bracket[0].path",
+      "action": "replace|append|reorder|add_skill",
+      "original": "current text at path (null for add_skill/reorder)",
+      "value": "new content",
+      "reason": "why this change helps match the archetype",
+      "fact_ids": []
+    }}
+  ],
+  "strategy_notes": "brief note on overall tailoring strategy"
+}}
+
+Rules:
+- Only make changes that are directly supported by the aggregated requirements
+- Do NOT invent experience or skills the candidate doesn't have
+- Each change must have a clear reason tied to archetype requirements
+- Maximum 12 changes"""

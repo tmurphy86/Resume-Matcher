@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiPost } from './client';
 
 export interface JobSummary {
   job_id: string;
@@ -59,4 +59,46 @@ export async function listJobs(params?: { q?: string; archetype?: string }): Pro
 export async function getJob(jobId: string): Promise<JobDetail> {
   const res = await apiFetch(`/jobs/${encodeURIComponent(jobId)}`, { credentials: 'include' });
   return asJson<JobDetail>(res, 'Failed to load job');
+}
+
+export interface JobSearchResult {
+  title: string;
+  company: string;
+  location: string;
+  snippet: string;
+  url: string;
+  source: string;
+}
+
+export async function searchExternalJobs(params: {
+  term: string;
+  location?: string;
+  sources?: string[];
+}): Promise<{ results: JobSearchResult[]; errors: Record<string, string> }> {
+  const res = await apiPost('/jobs/search', {
+    term: params.term,
+    location: params.location ?? null,
+    sources: params.sources ?? ['linkedin', 'indeed'],
+  });
+  return asJson<{ results: JobSearchResult[]; errors: Record<string, string> }>(
+    res,
+    'Job search failed'
+  );
+}
+
+export async function importExternalJob(data: {
+  url: string;
+  source: string;
+  title?: string;
+  company?: string;
+  description: string;
+}): Promise<{ job_id: string; application_id: string | null }> {
+  const res = await apiPost('/jobs/import', {
+    url: data.url,
+    source: data.source,
+    title: data.title ?? null,
+    company: data.company ?? null,
+    description: data.description,
+  });
+  return asJson<{ job_id: string; application_id: string | null }>(res, 'Job import failed');
 }

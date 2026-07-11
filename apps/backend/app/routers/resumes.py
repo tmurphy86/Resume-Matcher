@@ -26,6 +26,7 @@ from app.schemas import (
     ATSSubScores,
     GenerateContentResponse,
     GenerateInterviewPrepResponse,
+    ImproveMultiRequest,
     ImproveResumeConfirmRequest,
     ImproveResumeRequest,
     ImproveResumeResponse,
@@ -55,6 +56,7 @@ from app.services.improver import (
     extract_job_keywords,
     generate_improvements,
     generate_skill_target_plan,
+    generate_multi_jd_diffs,
     generate_resume_diffs,
     improve_resume,
     verify_skill_target_plan,
@@ -1160,6 +1162,85 @@ async def _improve_preview_flow(
             unverified=unverified,
         ),
     )
+
+
+@router.post("/improve-multi", response_model=ImproveResumeResponse)
+async def improve_multi(request: ImproveMultiRequest) -> ImproveResumeResponse:
+    """Tailor a resume for an archetype by aggregating requirements from multiple JDs."""
+    detail = "Failed to generate multi-JD improvement. Please try again."
+    try:
+        resume = await db.get_resume(request.resume_id)
+        if not resume:
+            raise HTTPException(status_code=404, detail="Resume not found")
+
+        raw_jobs = await asyncio.gather(
+            *(db.get_job(jid) for jid in request.jd_ids), return_exceptions=True
+        )
+        jobs = [j for j in raw_jobs if isinstance(j, dict)]
+        if not jobs:
+            raise HTTPException(status_code=400, detail="No valid job descriptions found")
+
+        language = get_content_language()
+        facts = await db.list_facts()
+        facts_section = _format_facts_for_prompt(facts)
+        original_resume_data = _get_original_resume_data(resume)
+
+        diff_result = await generate_multi_jd_diffs(
+            original_resume=resume["content"],
+            original_resume_data=original_resume_data,
+            archetype_name=request.archetype_name,
+            job_descriptions=[j["content"] for j in jobs],
+            language=language,
+            facts_section=facts_section,
+        )
+
+        if original_resume_data:
+            improved_data, applied_changes, _ = apply_diffs(
+                original=original_resume_data,
+                changes=diff_result.changes,
+                allowed_skill_targets=[],
+            )
+            warnings = verify_diff_result(
+                original=original_resume_data,
+                result=improved_data,
+                applied_changes=applied_changes,
+                job_keywords={},
+            )
+        else:
+            improved_data = {}
+            applied_changes = []
+            warnings = ["Original resume data unavailable"]
+
+        _hash_improved_data(improved_data)
+        request_id = str(uuid4())
+        return ImproveResumeResponse(
+            request_id=request_id,
+            data=ImproveResumeData(
+                request_id=request_id,
+                resume_id=None,
+                job_id=request.jd_ids[0],
+                resume_preview=(
+                    ResumeData.model_validate(improved_data)
+                    if improved_data
+                    else ResumeData.model_validate({})
+                ),
+                improvements=[],
+                warnings=warnings,
+                diff_summary=ResumeDiffSummary(
+                    total_changes=len(applied_changes),
+                    skills_added=0,
+                    skills_removed=0,
+                    descriptions_modified=len(applied_changes),
+                    certifications_added=0,
+                    high_risk_changes=0,
+                ),
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("improve-multi failed: %s", e)
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.post("/improve/confirm", response_model=ImproveResumeResponse)

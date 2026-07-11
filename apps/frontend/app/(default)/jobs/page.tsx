@@ -3,12 +3,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import X from 'lucide-react/dist/esm/icons/x';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/lib/i18n';
-import { listJobs, getJob, type JobSummary, type JobDetail } from '@/lib/api/jobs';
+import {
+  listJobs,
+  getJob,
+  searchExternalJobs,
+  importExternalJob,
+  type JobSummary,
+  type JobDetail,
+  type JobSearchResult,
+} from '@/lib/api/jobs';
 
 export default function JobsPage() {
   const { t } = useTranslations();
@@ -21,6 +31,16 @@ export default function JobsPage() {
   // ── Filters ───────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
   const [archetypeFilter, setArchetypeFilter] = useState('');
+
+  // ── External search panel ─────────────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<JobSearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [importingUrl, setImportingUrl] = useState<string | null>(null);
+  const [importedUrls, setImportedUrls] = useState<Set<string>>(new Set());
 
   // ── Detail panel ──────────────────────────────────────────────────────────
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -87,6 +107,48 @@ export default function JobsPage() {
 
   const toggleJob = (jobId: string) => setSelectedJobId((prev) => (prev === jobId ? null : jobId));
 
+  const handleExternalSearch = async () => {
+    if (!searchTerm.trim()) return;
+    setSearching(true);
+    setSearchError(null);
+    setSearchResults([]);
+    try {
+      const data = await searchExternalJobs({
+        term: searchTerm.trim(),
+        location: searchLocation.trim() || undefined,
+      });
+      setSearchResults(data.results);
+      if (Object.keys(data.errors).length > 0) {
+        setSearchError(t('jobs.search.errors.partialFailure'));
+      }
+    } catch (err) {
+      setSearchError(t('jobs.search.errors.searchFailed'));
+      console.error('External job search failed:', err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleImport = async (result: JobSearchResult) => {
+    setImportingUrl(result.url);
+    try {
+      await importExternalJob({
+        url: result.url,
+        source: result.source,
+        title: result.title,
+        company: result.company,
+        description: result.snippet,
+      });
+      setImportedUrls((prev) => new Set(prev).add(result.url));
+      await loadJobs();
+    } catch (err) {
+      console.error('Job import failed:', err);
+      setSearchError(t('jobs.search.errors.importFailed'));
+    } finally {
+      setImportingUrl(null);
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
@@ -115,6 +177,124 @@ export default function JobsPage() {
               {t('jobs.title')}
             </h1>
             <p className="mt-2 font-mono text-xs text-ink-soft">{t('jobs.subtitle')}</p>
+          </div>
+
+          {/* Find Jobs — collapsible external search panel */}
+          <div className="border-b border-black">
+            <button
+              type="button"
+              onClick={() => setSearchOpen((o) => !o)}
+              className="flex w-full items-center justify-between p-4 text-left"
+            >
+              <span className="font-serif text-lg uppercase tracking-tight text-black">
+                {t('jobs.search.title')}
+              </span>
+              {searchOpen ? (
+                <ChevronUp className="h-4 w-4 text-ink-soft" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-ink-soft" />
+              )}
+            </button>
+
+            {searchOpen && (
+              <div className="border-t border-black p-4">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Input
+                    placeholder={t('jobs.search.termPlaceholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleExternalSearch();
+                    }}
+                    className="sm:max-w-sm"
+                    aria-label={t('jobs.search.termPlaceholder')}
+                  />
+                  <Input
+                    placeholder={t('jobs.search.locationPlaceholder')}
+                    value={searchLocation}
+                    onChange={(e) => setSearchLocation(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleExternalSearch();
+                    }}
+                    className="sm:max-w-xs"
+                    aria-label={t('jobs.search.locationPlaceholder')}
+                  />
+                  <Button
+                    onClick={handleExternalSearch}
+                    disabled={searching || !searchTerm.trim()}
+                    className="shrink-0"
+                  >
+                    {searching ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      t('jobs.search.searchButton')
+                    )}
+                  </Button>
+                </div>
+
+                {searchError && (
+                  <p className="mt-3 font-mono text-xs text-destructive">{searchError}</p>
+                )}
+
+                {searchResults.length > 0 ? (
+                  <ul className="mt-4 divide-y divide-black border border-black">
+                    {searchResults.map((r) => (
+                      <li
+                        key={r.url}
+                        className="flex flex-col gap-2 p-4 sm:flex-row sm:items-start"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-sans text-sm font-bold">{r.title}</span>
+                            <span className="border border-black px-1.5 py-0.5 font-mono text-xs text-ink-soft">
+                              {r.source}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 font-mono text-xs text-ink-soft">
+                            {r.company} &mdash; {r.location}
+                          </p>
+                          <p className="mt-1 line-clamp-2 font-sans text-xs text-ink-soft">
+                            {r.snippet}
+                          </p>
+                          {r.url && (
+                            <a
+                              href={r.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1 block font-mono text-xs text-primary underline hover:no-underline"
+                            >
+                              {r.url}
+                            </a>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={importingUrl === r.url || importedUrls.has(r.url)}
+                          onClick={() => handleImport(r)}
+                          className="shrink-0 border border-black"
+                        >
+                          {importingUrl === r.url ? (
+                            <>
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                              {t('jobs.search.importing')}
+                            </>
+                          ) : importedUrls.has(r.url) ? (
+                            t('jobs.search.imported')
+                          ) : (
+                            t('jobs.search.importButton')
+                          )}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : !searching && searchTerm && searchResults.length === 0 && !searchError ? (
+                  <p className="mt-3 font-mono text-xs text-ink-soft">
+                    {t('jobs.search.noResults')}
+                  </p>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Filter bar */}
