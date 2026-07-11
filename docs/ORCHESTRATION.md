@@ -1,6 +1,6 @@
 # Engineering Lead Orchestration (Claude Code)
 
-> You (Claude Code main session, Sonnet) are the engineering lead. The program lead is the Resume Hulk Cowork project (Fable). Full workflow rationale lives there; this file is your operating manual.
+> You (Claude Code main session, Sonnet) are the engineering lead. The program lead is the Resume Hulk Cowork project (Fable); its bootstrap doc is [PM_BOOTSTRAP.md](PM_BOOTSTRAP.md). This file is your operating manual. Ticket-level shipping history lives in [archive/HISTORY.md](archive/HISTORY.md) — when a phase closes, move its Shipped section there and keep PROJECT_STATE.md under ~70 lines.
 
 ## Session loop
 1. Read `docs/ISSUES.md` first, then `docs/PROJECT_STATE.md` and `docs/BACKLOG.md`.
