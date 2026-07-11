@@ -65,8 +65,10 @@ from app.services.ats import compute_ats_score
 from app.schemas.refinement import RefinementConfig
 from app.services.cover_letter import (
     generate_cover_letter,
+    generate_follow_up_email,
     generate_outreach_message,
     generate_resume_title,
+    generate_thank_you_email,
 )
 from app.services.interview_prep import generate_interview_prep
 from app.services.provenance import check_provenance
@@ -2017,6 +2019,59 @@ async def generate_interview_prep_endpoint(
     return GenerateInterviewPrepResponse(
         interview_prep=interview_prep,
         message="Interview preparation generated successfully",
+    )
+
+
+@router.post("/generate-email/{application_id}")
+async def generate_email_endpoint(
+    application_id: str,
+    mode: str = Query("thank_you", pattern="^(thank_you|follow_up)$"),
+) -> GenerateContentResponse:
+    """Generate a thank-you or follow-up email for a job application.
+
+    This endpoint generates emails based on application record data (company, role, status).
+    No resume or job description is required.
+
+    Args:
+        application_id: The application ID from the tracker
+        mode: Either "thank_you" or "follow_up"
+
+    Returns:
+        Generated email with subject line and body
+    """
+    application = await db.get_application(application_id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    language = get_content_language()
+
+    try:
+        if mode == "thank_you":
+            content = await generate_thank_you_email(
+                company=application.get("company"),
+                role=application.get("role"),
+                status=application.get("status"),
+                applied_at=application.get("applied_at"),
+                language=language,
+            )
+        else:
+            content = await generate_follow_up_email(
+                company=application.get("company"),
+                role=application.get("role"),
+                status=application.get("status"),
+                applied_at=application.get("applied_at"),
+                language=language,
+            )
+    except Exception as e:
+        logger.error(f"Email generation failed for application {application_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate email. Please try again.",
+        )
+
+    return GenerateContentResponse(
+        content=content,
+        message=f"{'Thank-you' if mode == 'thank_you' else 'Follow-up'} email generated successfully",
     )
 
 

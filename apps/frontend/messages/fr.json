@@ -1023,7 +1023,11 @@
       "noResume": "Aucun CV joint pour l'instant.",
       "interestSignals": "Signaux d'intérêt",
       "loadFailed": "Impossible de charger cette candidature.",
-      "editResume": "Modifier le CV"
+      "editResume": "Modifier le CV",
+      "draftThankYou": "Rédiger un remerciement",
+      "draftFollowUp": "Rédiger un suivi",
+      "generatingEmail": "Génération de l'e-mail…",
+      "emailGenerated": "E-mail généré"
     },
     "interest": {
       "title": "Pourquoi je suis intéressé(e)",

@@ -1023,7 +1023,11 @@
       "noResume": "尚未附上简历。",
       "interestSignals": "兴趣信号",
       "loadFailed": "无法加载此申请。",
-      "editResume": "编辑简历"
+      "editResume": "编辑简历",
+      "draftThankYou": "起草感谢信",
+      "draftFollowUp": "起草跟进邮件",
+      "generatingEmail": "正在生成邮件…",
+      "emailGenerated": "邮件已生成"
     },
     "interest": {
       "title": "感兴趣的原因",

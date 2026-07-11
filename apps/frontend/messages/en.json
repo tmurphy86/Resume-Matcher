@@ -1023,7 +1023,11 @@
       "noResume": "No resume attached yet.",
       "interestSignals": "Interest Signals",
       "loadFailed": "Could not load this application.",
-      "editResume": "Edit resume"
+      "editResume": "Edit resume",
+      "draftThankYou": "Draft thank-you",
+      "draftFollowUp": "Draft follow-up",
+      "generatingEmail": "Generating email…",
+      "emailGenerated": "Email generated"
     },
     "interest": {
       "title": "Why I'm Interested",

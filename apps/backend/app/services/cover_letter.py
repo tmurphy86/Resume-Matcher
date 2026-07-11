@@ -8,8 +8,10 @@ from app.config import load_config_file
 from app.llm import complete
 from app.prompts.templates import (
     COVER_LETTER_PROMPT,
+    FOLLOW_UP_EMAIL_PROMPT,
     GENERATE_TITLE_PROMPT,
     OUTREACH_MESSAGE_PROMPT,
+    THANK_YOU_EMAIL_PROMPT,
 )
 from app.prompts import get_language_name
 
@@ -166,3 +168,79 @@ async def generate_resume_title(
     # Strip quotes and whitespace, truncate to 80 chars
     title = result.strip().strip("\"'")
     return title[:80]
+
+
+async def generate_thank_you_email(
+    company: str | None,
+    role: str | None,
+    status: str,
+    applied_at: str | None,
+    language: str = "en",
+) -> str:
+    """Generate a thank-you email for a job interview.
+
+    Args:
+        company: Company name from application record
+        role: Job role from application record
+        status: Application status (e.g., "interview")
+        applied_at: ISO date string when application was submitted
+        language: Output language code (en, es, zh, ja, pt)
+
+    Returns:
+        Generated thank-you email with Subject and body separated by ---
+    """
+    output_language = get_language_name(language)
+
+    prompt = THANK_YOU_EMAIL_PROMPT.format(
+        company=company or "Unknown",
+        role=role or "the position",
+        status=status,
+        applied_at=applied_at or "Unknown",
+        output_language=output_language,
+    )
+
+    result = await complete(
+        prompt=prompt,
+        system_prompt="You are a professional career coach. Write authentic, brief thank-you emails after job interviews.",
+        max_tokens=512,
+    )
+
+    return result.strip()
+
+
+async def generate_follow_up_email(
+    company: str | None,
+    role: str | None,
+    status: str,
+    applied_at: str | None,
+    language: str = "en",
+) -> str:
+    """Generate a follow-up email for a job application.
+
+    Args:
+        company: Company name from application record
+        role: Job role from application record
+        status: Application status (e.g., "no_response")
+        applied_at: ISO date string when application was submitted
+        language: Output language code (en, es, zh, ja, pt)
+
+    Returns:
+        Generated follow-up email with Subject and body separated by ---
+    """
+    output_language = get_language_name(language)
+
+    prompt = FOLLOW_UP_EMAIL_PROMPT.format(
+        company=company or "Unknown",
+        role=role or "the position",
+        status=status,
+        applied_at=applied_at or "Unknown",
+        output_language=output_language,
+    )
+
+    result = await complete(
+        prompt=prompt,
+        system_prompt="You are a professional career coach. Write respectful, low-friction follow-up emails for job applications.",
+        max_tokens=512,
+    )
+
+    return result.strip()

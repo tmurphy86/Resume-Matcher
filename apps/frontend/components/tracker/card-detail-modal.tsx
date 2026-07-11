@@ -20,6 +20,7 @@ import {
   getApplicationDetail,
   getInterestDimensions,
   updateApplication,
+  generateApplicationEmail,
   type ApplicationDetail,
   type InterestDimension,
   type InterestSignal,
@@ -52,6 +53,11 @@ export function CardDetailModal({
   const [savingSignals, setSavingSignals] = useState(false);
   const [signalsSaved, setSignalsSaved] = useState(false);
   const dimensionsFetchedRef = useRef(false);
+
+  // Email generation state
+  const [generatingEmail, setGeneratingEmail] = useState<'thank_you' | 'follow_up' | null>(null);
+  const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Load interest dimensions once (cached across modal opens).
   useEffect(() => {
@@ -94,6 +100,24 @@ export function CardDetailModal({
 
   // Keep textarea Enter from bubbling to dialog/global handlers.
   const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') e.stopPropagation();
+  };
+
+  const handleGenerateEmail = async (mode: 'thank_you' | 'follow_up') => {
+    if (!applicationId) return;
+    setGeneratingEmail(mode);
+    setEmailError(null);
+    try {
+      const result = await generateApplicationEmail(applicationId, mode);
+      setGeneratedEmail(result.content);
+    } catch {
+      setEmailError(t('common.error'));
+    } finally {
+      setGeneratingEmail(null);
+    }
+  };
+
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') e.stopPropagation();
   };
 
@@ -223,6 +247,65 @@ export function CardDetailModal({
               <p className="font-mono text-xs text-warning">
                 {t('tracker.modal.resumeUnavailable')}
               </p>
+            )}
+
+            {/* Email generation section */}
+            {detail && ['response', 'interview', 'offer', 'accepted'].includes(detail.status) && (
+              <div className="border-t border-black pt-4">
+                {generatedEmail ? (
+                  <div className="space-y-2">
+                    <Label>{t('tracker.modal.emailGenerated')}</Label>
+                    <Textarea
+                      value={generatedEmail}
+                      readOnly
+                      onKeyDown={handleEmailKeyDown}
+                      rows={6}
+                      className="cursor-default bg-paper-tint"
+                    />
+                    <div className="flex items-center justify-end gap-3">
+                      <Button size="sm" variant="outline" onClick={() => setGeneratedEmail(null)}>
+                        {t('common.close')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGenerateEmail('thank_you')}
+                      disabled={generatingEmail !== null}
+                    >
+                      {generatingEmail === 'thank_you' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('tracker.modal.generatingEmail')}
+                        </>
+                      ) : (
+                        t('tracker.modal.draftThankYou')
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGenerateEmail('follow_up')}
+                      disabled={generatingEmail !== null}
+                    >
+                      {generatingEmail === 'follow_up' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('tracker.modal.generatingEmail')}
+                        </>
+                      ) : (
+                        t('tracker.modal.draftFollowUp')
+                      )}
+                    </Button>
+                  </div>
+                )}
+                {emailError && (
+                  <p className="mt-2 font-mono text-xs text-destructive">{emailError}</p>
+                )}
+              </div>
             )}
 
             {/* Interest signals panel */}

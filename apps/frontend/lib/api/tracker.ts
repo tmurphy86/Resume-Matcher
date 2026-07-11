@@ -191,3 +191,12 @@ export async function bulkDeleteApplications(
   const res = await apiPost('/applications/bulk-delete', { application_ids: applicationIds });
   return asJson<ApplicationActionResponse>(res, 'Failed to delete applications');
 }
+
+// Generate thank-you or follow-up email for an application.
+export async function generateApplicationEmail(
+  applicationId: string,
+  mode: 'thank_you' | 'follow_up'
+): Promise<{ content: string; message: string }> {
+  const res = await apiPost(`/resumes/generate-email/${applicationId}?mode=${mode}`, {});
+  return asJson<{ content: string; message: string }>(res, 'Failed to generate email');
+}

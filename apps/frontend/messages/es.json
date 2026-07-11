@@ -1023,7 +1023,11 @@
       "noResume": "Aún no hay currículum adjunto.",
       "interestSignals": "Señales de interés",
       "loadFailed": "No se pudo cargar esta candidatura.",
-      "editResume": "Editar currículum"
+      "editResume": "Editar currículum",
+      "draftThankYou": "Borrador de agradecimiento",
+      "draftFollowUp": "Borrador de seguimiento",
+      "generatingEmail": "Generando correo…",
+      "emailGenerated": "Correo generado"
     },
     "interest": {
       "title": "Por qué me interesa",

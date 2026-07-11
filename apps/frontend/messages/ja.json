@@ -1023,7 +1023,11 @@
       "noResume": "まだ履歴書が添付されていません。",
       "interestSignals": "興味シグナル",
       "loadFailed": "この応募を読み込めませんでした。",
-      "editResume": "履歴書を編集"
+      "editResume": "履歴書を編集",
+      "draftThankYou": "お礼メールを作成",
+      "draftFollowUp": "フォローアップメールを作成",
+      "generatingEmail": "メールを生成中…",
+      "emailGenerated": "メールが生成されました"
     },
     "interest": {
       "title": "興味を持った理由",

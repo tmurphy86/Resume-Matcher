@@ -689,3 +689,63 @@ Output this exact JSON format, nothing else:
   ],
   "strategy_notes": "brief summary of the tailoring approach"
 }}"""
+
+THANK_YOU_EMAIL_PROMPT = """Write a brief thank-you email for a job interview.
+
+IMPORTANT: Write in {output_language}.
+
+Application Context:
+- Company: {company}
+- Role: {role}
+- Application Status: {status}
+- Applied on: {applied_at}
+
+Requirements:
+- Subject line format: Subject: Thank you — [Role] at [Company]
+- Separator: --- (three hyphens on its own line)
+- 2-3 short paragraphs (email body)
+- Maximum 150 words
+- Reference ONLY information present in the application context (company, role, status)
+- Do NOT invent interview details, conversation topics, or discussion points
+- Do NOT use em dash ("—") in the body, but it's allowed in the subject line
+- Opening: Brief thank-you for the interview
+- Middle: One genuine observation about the role or company (grounded only in what would be known from the job description or public information)
+- Closing: Simple expression of interest, no desperate language
+- Tone: Professional and authentic, not overly enthusiastic
+
+Output format:
+Subject: Thank you — [Role] at [Company]
+---
+[email body]
+
+Output plain text only. No markdown formatting (except for the Subject: and --- separator)."""
+
+FOLLOW_UP_EMAIL_PROMPT = """Write a brief follow-up email for a job application.
+
+IMPORTANT: Write in {output_language}.
+
+Application Context:
+- Company: {company}
+- Role: {role}
+- Application Status: {status}
+- Applied on: {applied_at}
+
+Requirements:
+- Subject line format: Subject: Following up — [Role] at [Company]
+- Separator: --- (three hyphens on its own line)
+- 2-3 short paragraphs (email body)
+- Maximum 150 words
+- Reference ONLY information present in the application context (company, role, status)
+- Do NOT invent interview details, conversations, or discussions that haven't occurred
+- Do NOT use em dash ("—") in the body, but it's allowed in the subject line
+- Opening: Polite reference to the original application (e.g., "I applied for the [Role] position at [Company] on [date]")
+- Middle: One brief reason you're interested (grounded only in public company information or the job posting)
+- Closing: Request for an update or next steps, low-friction
+- Tone: Professional, respectful of their time, not pushy
+
+Output format:
+Subject: Following up — [Role] at [Company]
+---
+[email body]
+
+Output plain text only. No markdown formatting (except for the Subject: and --- separator)."""
