@@ -4,7 +4,7 @@
 > Ticket rules: one module focus, executable acceptance criteria, explicit out-of-scope. See docs/ORCHESTRATION.md.
 > **BUG GATE: while any ticket in `## BUGS` is open, feature tickets must not be dispatched.** Bugs come from docs/ISSUES.md (human testing). Every fix ships a regression test that fails on pre-fix code.
 
-## BUGS (open — blocks all feature work)
+## BUGS (all fixed — bug gate CLEARED 2026-07-11)
 
 ### BUG-001: GET /api/applications 500s — tracker and career pages cannot load
 **Assign:** senior-coder (sonnet) **Source:** ISSUES.md "Application tracker couldn't load applications"

@@ -4,9 +4,10 @@
 > Eng lead: update at the END of every session. Program lead: read at the START of every planning session.
 
 ## Current milestone
-**BUG GATE, then P4 — Job intake + outreach** ([BACKLOG.md](BACKLOG.md): BUG-001…004, then RH-401…404).
-P3 shipped complete (all 8 tickets + post-review fix; 741/276 green) but **human testing found functional defects** → P3 acceptance is CONDITIONAL until the BUGS section clears. New standing process: **[docs/ISSUES.md](ISSUES.md) is Tim's bug inbox and step 1 of every eng-lead session; open bugs block ALL feature work** (ORCHESTRATION.md §Session loop updated).
-Dispatch order: BUG-002 (trivial, root cause confirmed) + BUG-001 + BUG-003 in parallel → BUG-004 smoke sweep → then P4 wave 1 = RH-401, RH-402; wave 2 = RH-403, RH-404.
+**P4 — Job intake + outreach** ([BACKLOG.md](BACKLOG.md): RH-401…404).
+Bug gate **CLEARED** (2026-07-11): BUG-001..003 fixed + BUG-004 smoke suite shipped. P3 acceptance now UNCONDITIONAL. Suite: 759 backend / 296 frontend.
+P4 wave 1 = RH-401, RH-402 (dispatch in parallel); wave 2 = RH-403 (depends RH-402), RH-404 (depends RH-402).
+**Note from BUG-001:** `status_history` is not yet in `ApplicationResponse` schema — career outcome rates always show 0 at runtime. Follow-on ticket needed.
 **Reviewer instruction (from P2-F3):** review diffs against the BACKLOG ticket's full acceptance criteria, not the worker's summary. Partial delivery must be reported as "partially shipped, criterion X deferred" in PROJECT_STATE — never marked ✅.
 
 ## Baseline (2026-07-09, commit dd9b5c3)
@@ -24,8 +25,14 @@ Dispatch order: BUG-002 (trivial, root cause confirmed) + BUG-001 + BUG-003 in p
 - **RH-106** `feat(tracker): RH-106 considering quick-capture` (1aa3bd6) — `Application.resume_id` nullable; `considering` status; `POST /applications/quick`; 7 integration tests. ✅
 - **RH-107** `feat(tracker): RH-107 considering column + interest quick-tags` (3fa1e83) — frontend: considering column, interest signal chips + panel, quick-capture mode in add dialog; all 6 locales updated (also fixed fr.json parity gap); 4 new API tests. ✅
 
+## Shipped (Bug gate — 2026-07-11, 5 commits)
+- **BUG-002** `fix(builder): BUG-002 murphy missing from templateLabels` (f7b3f08) — `murphy` entry added to `templateLabels`; defensive `getTemplateLabel()` fallback; 4 regression tests; all 6 locales. ✅
+- **BUG-003** `fix(facts): BUG-003 fact extraction rendering empty` (108907f) — prompt changed to `{"facts":[...]}` shape; silent-empty path now raises 500; 3 explicit empty states in extract modal; 4 regression tests; UUID fact_ids on candidates; all 6 locales. ✅
+- **BUG-001** `fix(tracker): BUG-001 GET /api/applications 500 on legacy schema` (d2c0d21) — idempotent `ALTER TABLE applications` migrations for `interest_signals` + `status_history`; 2 regression tests with legacy-schema seeded DB; career page applications fetch made non-fatal. ✅
+- **BUG-004** `test(smoke): BUG-004 human-path smoke suites` (7a3a14f) — 9 backend seeded-DB endpoint smoke tests + 6 frontend per-page render tests (builder iterates all template IDs). ✅
+
 ## In flight
-_(none — P3 complete)_
+_(none — P4 ready to dispatch)_
 
 ## Blockers
 _(none)_
@@ -74,3 +81,4 @@ _(none)_
 - 2026-07-10 — Program lead: P2 reviewed — **ACCEPTED WITH CONDITIONS** (docs/reviews/P2-review.md). Anti-hallucination loop verified end-to-end (RH-201/202); ADR-004 conformance confirmed. Findings: RH-205 shipped without the variant editor (F1 → RH-301); RH-210 never persists variant_of phrasings to blocks (F2 → RH-302); reviewer must check diffs against full ticket criteria, partial delivery must be reported, not ✅'d (F3). ADR-005 accepted (career intelligence: deterministic numbers, LLM narrative; career_reports table; status_history column). **P3 tickets RH-301…308 cut; RH-301/302 mandatory first.**
 - 2026-07-10 — Eng lead (P3 — SDD workflow): dispatched all 8 tickets via subagent-driven-development (sequential by dependency chain). Key fixes during review loops: RH-301 null guard + addVariantToResumeData tests; RH-303 dead code; RH-306 gap URL param + markdown sanitizer + provenance label. Final whole-branch Opus review caught scores_json dict-vs-array contract break (career quadrant/cards never rendered against real backend) — fixed in post-review commit. Suite: 741 backend, 276 frontend. **P3 complete — awaiting program lead review.**
 - 2026-07-10 — Program lead: P3 marked CONDITIONAL — human testing surfaced functional defects (page-level integration breaks that green unit suites missed). New standing process installed: docs/ISSUES.md bug inbox + bug gate (ISSUES first every session; open bugs block feature work; every fix ships a pre-fix-failing regression test). BUG-001…003 filed from Tim's reports with triage hints (BUG-002 root cause confirmed by inspection: murphy missing from templateLabels); BUG-004 adds a permanent human-path smoke suite so this bug class gets automated. P4 tickets RH-401…404 cut (thank-you emails, JD library, JobSpy intake w/ python-jobspy pre-approved, multi-JD tailoring) — all blocked behind the bug gate.
+- 2026-07-11 — Eng lead (bug gate): dispatched BUG-001/002/003 in parallel (worktrees); BUG-004 smoke suite implemented directly (agent spent-limit killed). Root causes: BUG-001 = missing ALTER TABLE migrations for interest_signals + status_history; BUG-002 = murphy missing from templateLabels; BUG-003 = FACT_EXTRACTION_PROMPT asked for array but JSON extractor only handles objects → silent empty. Suite: 759 backend (+18 new), 296 frontend (+16 new smoke). Bug gate CLEARED; P3 ACCEPTED unconditional. P4 wave 1 dispatched.

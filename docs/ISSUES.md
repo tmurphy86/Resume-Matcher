@@ -19,7 +19,7 @@
 ---
 
 ### Application tracker couldn't load applications
-- **status:** new
+- **status:** fixed (d2c0d21)
 - **date:** 2026-07-10
 - **where:** Tracker page (and Career page, which loads the same data)
 - **what happened:** Tracker fails to load applications. Career page reports the same underlying failure while loading reports.
@@ -33,7 +33,7 @@ Failed to load career reports: Error: Failed to load applications. Please try ag
 - **program-lead triage hint:** the message is the backend's generic 500 detail from `GET /api/applications` — the API itself is failing, not the frontend. Prime suspects are P3's RH-307 changes: lazy `status_history` backfill or list serialization hitting legacy rows (pre-P3 apps without `status_history`, or `considering` rows with `resume_id=NULL`). Check backend logs for the detailed error (repo pattern logs it server-side). Career page should also not surface a tracker-worded error for a reports load — secondary UX defect.
 
 ### Can't edit the resume
-- **status:** new
+- **status:** fixed (f7b3f08)
 - **date:** 2026-07-10
 - **where:** Builder (resume edit)
 - **what happened:** Builder crashes; error boundary triggers.
@@ -48,7 +48,7 @@ Error Boundary caught an error: TypeError: Cannot read properties of undefined (
 - **program-lead triage hint:** confirmed by inspection — `formatting-controls.tsx:201` does `templateLabels[template.id].description` while mapping `TEMPLATE_OPTIONS`. RH-207 registered `murphy` in `TEMPLATE_OPTIONS` but `templateLabels` has no `murphy` entry → undefined. Fix the missing label entry AND make the map defensive; regression test must render FormattingControls with every id in `TEMPLATE_OPTIONS` (that test would have caught this at RH-207 time).
 
 ### Extracting facts renders with no facts yet
-- **status:** new
+- **status:** fixed (108907f)
 - **date:** 2026-07-10
 - **where:** Facts page → Extract from master
 - **what happened:** Extraction runs but the review list renders empty ("no facts yet").
