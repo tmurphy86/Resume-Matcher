@@ -31,8 +31,13 @@ P4 wave 1 = RH-401, RH-402 (dispatch in parallel); wave 2 = RH-403 (depends RH-4
 - **BUG-001** `fix(tracker): BUG-001 GET /api/applications 500 on legacy schema` (d2c0d21) — idempotent `ALTER TABLE applications` migrations for `interest_signals` + `status_history`; 2 regression tests with legacy-schema seeded DB; career page applications fetch made non-fatal. ✅
 - **BUG-004** `test(smoke): BUG-004 human-path smoke suites` (7a3a14f) — 9 backend seeded-DB endpoint smoke tests + 6 frontend per-page render tests (builder iterates all template IDs). ✅
 
+## Shipped (P4 wave 1 — 2026-07-11)
+- **RH-401** `feat(tracker): RH-401 thank-you/follow-up email generation` (486902c) — `THANK_YOU_EMAIL_PROMPT` + `FOLLOW_UP_EMAIL_PROMPT`; `generate_thank_you_email` / `generate_follow_up_email` in cover_letter service; `POST /resumes/generate-email/{application_id}?mode=thank_you|follow_up`; tracker card modal shows "Draft thank-you / follow-up" buttons for response+ statuses with email display; 13 backend + 6 frontend tests; all 6 locales. ✅
+- **RH-402** `feat(jobs): RH-402 JD library view` (7a14e41) — `GET /jobs` list endpoint (text search + archetype filter from latest career report); `GET /jobs/{id}` extended with `application_ids`; `JobSummary` schema; `/jobs` page with split-pane list + detail view (Swiss design), Briefcase nav link; `lib/api/jobs.ts`; 14 backend + 8 frontend tests; all 6 locales. ✅
+
 ## In flight
-_(none — P4 ready to dispatch)_
+- **RH-403** JobSpy intake — agent running  
+- **RH-404** Multi-JD tailoring — agent running
 
 ## Blockers
 _(none)_
@@ -82,3 +87,4 @@ _(none)_
 - 2026-07-10 — Eng lead (P3 — SDD workflow): dispatched all 8 tickets via subagent-driven-development (sequential by dependency chain). Key fixes during review loops: RH-301 null guard + addVariantToResumeData tests; RH-303 dead code; RH-306 gap URL param + markdown sanitizer + provenance label. Final whole-branch Opus review caught scores_json dict-vs-array contract break (career quadrant/cards never rendered against real backend) — fixed in post-review commit. Suite: 741 backend, 276 frontend. **P3 complete — awaiting program lead review.**
 - 2026-07-10 — Program lead: P3 marked CONDITIONAL — human testing surfaced functional defects (page-level integration breaks that green unit suites missed). New standing process installed: docs/ISSUES.md bug inbox + bug gate (ISSUES first every session; open bugs block feature work; every fix ships a pre-fix-failing regression test). BUG-001…003 filed from Tim's reports with triage hints (BUG-002 root cause confirmed by inspection: murphy missing from templateLabels); BUG-004 adds a permanent human-path smoke suite so this bug class gets automated. P4 tickets RH-401…404 cut (thank-you emails, JD library, JobSpy intake w/ python-jobspy pre-approved, multi-JD tailoring) — all blocked behind the bug gate.
 - 2026-07-11 — Eng lead (bug gate): dispatched BUG-001/002/003 in parallel (worktrees); BUG-004 smoke suite implemented directly (agent spent-limit killed). Root causes: BUG-001 = missing ALTER TABLE migrations for interest_signals + status_history; BUG-002 = murphy missing from templateLabels; BUG-003 = FACT_EXTRACTION_PROMPT asked for array but JSON extractor only handles objects → silent empty. Suite: 759 backend (+18 new), 296 frontend (+16 new smoke). Bug gate CLEARED; P3 ACCEPTED unconditional. P4 wave 1 dispatched.
+- 2026-07-11 — Eng lead (P4 wave 1): integrated RH-401 (email generation) and RH-402 (JD library) from worktrees. Cherry-pick pattern: copy new files + surgical edits to locale files (never copy whole locale file from worktree — avoids reverting previously committed keys). Suite: 777 backend (+18 new), 310 frontend (+14 new). Wave 2 (RH-403, RH-404) dispatched in parallel.
