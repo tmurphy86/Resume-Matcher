@@ -10,20 +10,11 @@ vi.mock('@/lib/i18n', () => ({
   useTranslations: () => ({ t: (k: string) => k, messages: {}, locale: 'en' }),
 }));
 
+// BUG-009: Use schema-parity fixture from smoke-shared to prevent fixture drift.
+import { mockFact } from './smoke-shared';
+
 vi.mock('@/lib/api/facts', () => ({
-  listFacts: vi.fn().mockResolvedValue([
-    {
-      fact_id: 'f-1',
-      statement: 'Led a team of 20 engineers.',
-      context: 'work',
-      source: 'master_resume',
-      metrics_json: {},
-      tags_json: ['leadership'],
-      confidence: 'verified',
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-01-01T00:00:00Z',
-    },
-  ]),
+  listFacts: vi.fn().mockResolvedValue([mockFact]),
   extractFacts: vi.fn(),
   confirmFacts: vi.fn(),
   confirmVariant: vi.fn(),

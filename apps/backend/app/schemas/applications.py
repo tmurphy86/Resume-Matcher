@@ -60,6 +60,7 @@ class ApplicationResponse(BaseModel):
     applied_at: str | None = None
     notes: str | None = None
     interest_signals: list[InterestSignal] = []
+    status_history: list[dict[str, Any]] = []
     position: int
     created_at: str
     updated_at: str

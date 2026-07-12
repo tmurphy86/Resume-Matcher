@@ -57,7 +57,7 @@ Error Boundary caught an error: TypeError: Cannot read properties of undefined (
 - **program-lead triage hint:** three candidate layers — backend returns candidates but response shape mismatches what `lib/api/facts.ts` expects; the page filters candidates out (e.g., `duplicate_of` annotation from RH-203 marking everything duplicate after a prior confirm run); or extraction silently failed (check backend logs / network tab for the `/facts/extract` response body). Repro with a fresh browser network capture before fixing.
 
 ### Application quick-capture 500s
-- **status:** new
+- **status:** fixed (BUG-005, 2026-07-11)
 - **date:** 2026-07-11
 - **where:** Tracker → quick-capture ("considering") add
 - **what happened:** Adding an application fails.
@@ -69,7 +69,7 @@ INFO: 127.0.0.1:64043 - "POST /api/v1/applications/quick HTTP/1.1" 500 Internal 
 - **program-lead triage hint:** endpoint worked at RH-106 ship; broken since. Suspects in order: BUG-001's idempotent ALTER TABLE migrations (quick-capture inserts may not populate the new columns on some code path), RH-403's import path (`POST /jobs/import` reuses quick-capture — did it modify shared code?), RH-303 background JD-parse task firing on a job created via quick path. Backend log has the detailed error — start there, not with guesses.
 
 ### Fact extraction renders empty — REOPENED (was BUG-003, "fixed" 108907f)
-- **status:** new (reopened)
+- **status:** fixed (BUG-006, 2026-07-11)
 - **date:** 2026-07-11
 - **where:** Facts page → Extract from master
 - **what happened:** Still renders empty after the BUG-003 fix. Tim's assessment: likely a function bug, not the LLM.
@@ -78,7 +78,7 @@ INFO: 127.0.0.1:64043 - "POST /api/v1/applications/quick HTTP/1.1" 500 Internal 
 - **program-lead triage hint:** REOPEN PROTOCOL applies — the BUG-003 regression tests passed while the behavior stayed broken, so those tests verify the wrong layer. Required: (1) post-mortem the prior fix's tests — what do they actually exercise vs. what the browser exercises; (2) trace the REAL request path end-to-end (network capture: does `/facts/extract` return candidates? does the modal receive them? does render filter them?); (3) the fix must include a test at the layer that was actually broken. If none of the three empty-state messages appears, the frontend branch handling is broken regardless of backend behavior.
 
 ### JD Library fails to load jobs
-- **status:** new
+- **status:** fixed (BUG-007, 2026-07-11)
 - **date:** 2026-07-11
 - **where:** /jobs page (new in RH-402)
 - **what happened:** Page shows "Failed to load jobs."
@@ -87,7 +87,7 @@ INFO: 127.0.0.1:64043 - "POST /api/v1/applications/quick HTTP/1.1" 500 Internal 
 - **program-lead triage hint:** `GET /jobs` list is new (RH-402). Suspects: `JobSummary` Pydantic validation failing on legacy jobs (pre-RH-303 rows without `metadata_json["parsed"]`, or rows missing company/role dynamic keys); the archetype-badge lookup against the latest career report (empty/missing report?). Same class as BUG-001: new list endpoint never tested against real legacy-shaped rows. Backend log has the truth.
 
 ### Outcome rates always 0 — status_history absent from ApplicationResponse
-- **status:** new
+- **status:** fixed (BUG-008, 2026-07-11)
 - **date:** 2026-07-11 (self-reported by eng lead at P4 close)
 - **where:** Career page outcome overlay
 - **what happened:** `status_history` exists in DB but is not in the `ApplicationResponse` schema, so outcome rates compute over missing data and show 0.

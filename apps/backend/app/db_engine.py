@@ -87,3 +87,70 @@ def init_models_sync(engine: Engine) -> None:
                 conn.exec_driver_sql(
                     "ALTER TABLE applications ADD COLUMN status_history TEXT DEFAULT '[]'"
                 )
+
+            # --- applications: make resume_id nullable (BUG-005 / RH-106) ---
+            # The original schema had resume_id as NOT NULL (Mapped[str]).  RH-106
+            # changed the ORM model to Mapped[str | None] so quick-capture cards
+            # could be created without a resume, but SQLite does not support
+            # ALTER COLUMN, so existing databases kept the NOT NULL constraint and
+            # POST /quick would fail with IntegrityError on every insert.
+            # Fix: rebuild the table when the constraint is detected.  By the time
+            # this block runs, interest_signals and status_history have already
+            # been added above (or were already present), so all 14 known columns
+            # are safe to copy.
+            resume_id_col = next(
+                (c for c in app_cols if c["name"] == "resume_id"), None
+            )
+            if resume_id_col and resume_id_col["notnull"]:
+                conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+                conn.exec_driver_sql(
+                    """
+                    CREATE TABLE applications_new (
+                        application_id   TEXT NOT NULL PRIMARY KEY,
+                        job_id           TEXT NOT NULL,
+                        resume_id        TEXT,
+                        master_resume_id TEXT,
+                        status           TEXT NOT NULL DEFAULT 'applied',
+                        company          TEXT,
+                        role             TEXT,
+                        applied_at       TEXT,
+                        notes            TEXT,
+                        interest_signals TEXT DEFAULT '[]',
+                        status_history   TEXT DEFAULT '[]',
+                        position         INTEGER DEFAULT 0,
+                        created_at       TEXT NOT NULL,
+                        updated_at       TEXT NOT NULL
+                    )
+                    """
+                )
+                conn.exec_driver_sql(
+                    """
+                    INSERT INTO applications_new
+                        (application_id, job_id, resume_id, master_resume_id,
+                         status, company, role, applied_at, notes,
+                         interest_signals, status_history, position,
+                         created_at, updated_at)
+                    SELECT application_id, job_id, resume_id, master_resume_id,
+                           status, company, role, applied_at, notes,
+                           interest_signals, status_history, position,
+                           created_at, updated_at
+                    FROM applications
+                    """
+                )
+                conn.exec_driver_sql("DROP TABLE applications")
+                conn.exec_driver_sql(
+                    "ALTER TABLE applications_new RENAME TO applications"
+                )
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS ix_applications_job_id"
+                    " ON applications (job_id)"
+                )
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS ix_applications_resume_id"
+                    " ON applications (resume_id)"
+                )
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS ix_applications_status"
+                    " ON applications (status)"
+                )
+                conn.exec_driver_sql("PRAGMA foreign_keys=ON")

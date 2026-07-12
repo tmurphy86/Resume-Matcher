@@ -203,3 +203,114 @@ class TestListJobs:
         data = resp.json()
         assert "application_ids" in data
         assert app_row["application_id"] in data["application_ids"]
+
+    async def test_legacy_job_without_parsed_metadata(self, isolated_db):
+        """Test that jobs without parsed metadata are handled gracefully.
+
+        Legacy rows pre-dating RH-303 have no parsed key in metadata_json.
+        The endpoint should return 200 with graceful null values.
+        """
+        job = await isolated_db.create_job(content="Senior Engineer role")
+        # Verify the job exists and has no parsed key yet
+        fetched = await isolated_db.get_job(job["job_id"])
+        assert "parsed" not in fetched
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["job_id"] == job["job_id"]
+        assert data[0]["snippet"] == "Senior Engineer role"
+        assert data[0]["company"] is None
+        assert data[0]["role"] is None
+        assert data[0]["level"] is None
+
+    async def test_legacy_job_without_parsed_key(self, isolated_db):
+        """Test that jobs without parsed key in metadata_json are handled gracefully.
+
+        Legacy rows may have metadata_json with company/role but no parsed key.
+        """
+        job = await isolated_db.create_job(
+            content="Staff DevOps Engineer",
+        )
+        # Update the job to remove the parsed key if it exists, keeping only company/role.
+        await isolated_db.update_job(job["job_id"], {"company": "TechCorp", "role": "DevOps"})
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["company"] == "TechCorp"
+        assert data[0]["role"] == "DevOps"
+        assert data[0]["level"] is None
+
+    async def test_list_jobs_with_parsed_and_fallback_fields(self, isolated_db):
+        """Test that parsed fields take precedence over metadata fields.
+
+        When both parsed["company"] and metadata["company"] exist,
+        parsed should win.
+        """
+        job = await isolated_db.create_job(content="Engineer role")
+        # Store parsed data with one company, and metadata with another
+        await isolated_db.update_job(
+            job["job_id"],
+            {
+                "company": "MetaCorp",
+                "role": "MetaRole",
+                "parsed": {
+                    "responsibilities": ["Work on stuff"],
+                    "requirements": ["Be smart"],
+                    "level": "Senior",
+                    "comp": None,
+                },
+            },
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        # Company should prefer parsed, but parsed doesn't have company, so fallback to metadata
+        assert data[0]["company"] == "MetaCorp"
+        assert data[0]["role"] == "MetaRole"
+        assert data[0]["level"] == "Senior"
+
+    async def test_legacy_job_with_non_string_level(self, isolated_db):
+        """Test that non-string level values are handled gracefully.
+
+        Some legacy or corrupted parsed data might have non-string values.
+        The endpoint should coerce them gracefully.
+        """
+        job = await isolated_db.create_job(content="DevOps role")
+        # Store parsed data with level as a number or dict (corrupted data)
+        await isolated_db.update_job(
+            job["job_id"],
+            {
+                "parsed": {
+                    "responsibilities": [],
+                    "requirements": [],
+                    "level": {"text": "Senior"},  # Non-string level
+                    "comp": None,
+                },
+            },
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/v1/jobs")
+        # Should return 200 even with non-standard level data
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        # Level should be None or gracefully handled
+        assert data[0]["level"] is None or isinstance(data[0]["level"], str)

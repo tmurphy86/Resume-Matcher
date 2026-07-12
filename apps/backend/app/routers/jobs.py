@@ -131,15 +131,28 @@ async def list_jobs(
         if archetype and (job_archetype or "").lower() != archetype.lower():
             continue
 
+        # Defensive extraction: ensure all string fields are actually strings or None
+        company_val = parsed.get("company") or job.get("company")
+        company: str | None = company_val if isinstance(company_val, str) else None
+
+        role_val = parsed.get("role") or job.get("role")
+        role: str | None = role_val if isinstance(role_val, str) else None
+
+        level_val = parsed.get("level")
+        level: str | None = level_val if isinstance(level_val, str) else None
+
+        archetype_val = job_archetype
+        archetype: str | None = archetype_val if isinstance(archetype_val, str) else None
+
         summaries.append(
             JobSummary(
                 job_id=job["job_id"],
                 snippet=content[:200],
                 created_at=job.get("created_at", ""),
-                company=parsed.get("company") or job.get("company"),
-                role=parsed.get("role") or job.get("role"),
-                level=parsed.get("level"),
-                archetype=job_archetype,
+                company=company,
+                role=role,
+                level=level,
+                archetype=archetype,
             )
         )
 
