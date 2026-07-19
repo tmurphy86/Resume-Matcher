@@ -4,16 +4,17 @@
 > Ticket rules: one module focus, executable acceptance criteria, explicit out-of-scope. See docs/ORCHESTRATION.md.
 > **BUG GATE: while any ticket in `## BUGS` is open, feature tickets must not be dispatched.** Bugs come from docs/ISSUES.md (human testing). Every fix ships a regression test that fails on pre-fix code.
 
-## BUGS (OPEN — gate re-engaged 2026-07-11 after P4 human testing)
+## BUGS — closed 2026-07-11 (second gate)
+> Bug gate 2 cleared 2026-07-11 (see docs/PROJECT_STATE.md session log). No open bug tickets remain.
 
 ### BUG-005: POST /api/v1/applications/quick 500s
 **Assign:** senior-coder (sonnet) **Source:** ISSUES.md "Application quick-capture 500s"
 **Goal:** Quick-capture works; the regression that broke it since RH-106 is identified and dated.
 **Files:** `apps/backend/app/routers/applications.py`, `apps/backend/app/database.py`, suspects per triage hint (BUG-001 migrations, RH-403 import path, RH-303 background parse), tests
 **Acceptance criteria:**
-- [ ] Root cause from server logs stated in report, including WHICH commit broke it (git bisect mentality, not guesswork)
-- [ ] Regression test exercises `POST /applications/quick` against a DB in the state that failed — fails pre-fix
-- [ ] `POST /jobs/import` (RH-403) path re-verified if shared code was touched
+- [x] Root cause from server logs stated in report, including WHICH commit broke it (git bisect mentality, not guesswork)
+- [x] Regression test exercises `POST /applications/quick` against a DB in the state that failed — fails pre-fix (`tests/integration/test_quick_capture_legacy_schema.py`)
+- [x] `POST /jobs/import` (RH-403) path re-verified if shared code was touched
 **Test:** `cd apps/backend && uv run pytest tests/integration -k "quick or application"`
 
 ### BUG-006: Fact extraction empty — REOPENED (post-mortem required)
@@ -21,10 +22,10 @@
 **Goal:** Extraction works in the actual browser path, and the BUG-003 test gap is understood and closed.
 **Files:** trace first — likely `apps/frontend/app/(default)/facts/page.tsx` / `lib/api/facts.ts` / extract modal branch handling; backend only if the trace says so
 **Acceptance criteria:**
-- [ ] **Post-mortem paragraph in report:** why did 108907f's 4 regression tests pass while the feature stayed broken? What layer did they test vs. the layer that fails?
-- [ ] End-to-end trace evidence (actual response body → modal state → render branch) identifies the break
-- [ ] Fix + regression test at the actually-broken layer; the three explicit empty states demonstrably render in component tests
-- [ ] Silent-empty is impossible: every branch either shows candidates, a specific empty-state, or an error
+- [x] **Post-mortem paragraph in report:** why did 108907f's 4 regression tests pass while the feature stayed broken? What layer did they test vs. the layer that fails?
+- [x] End-to-end trace evidence (actual response body → modal state → render branch) identifies the break
+- [x] Fix + regression test at the actually-broken layer; the three explicit empty states demonstrably render in component tests (`tests/extract-modal.test.tsx`)
+- [x] Silent-empty is impossible: every branch either shows candidates, a specific empty-state, or an error
 **Test:** `cd apps/frontend && npm run test && cd ../backend && uv run pytest tests/service/test_fact_extractor.py`
 
 ### BUG-007: JD Library "Failed to load jobs"
@@ -32,8 +33,8 @@
 **Goal:** `GET /jobs` returns 200 for ALL real job-row shapes.
 **Files:** `apps/backend/app/routers/jobs.py`, `apps/backend/app/schemas/` (JobSummary), tests
 **Acceptance criteria:**
-- [ ] Root cause from server logs stated in report
-- [ ] Regression test seeds legacy shapes (no `parsed` key, missing company/role, no career report exists) → 200 with graceful nulls — fails pre-fix
+- [x] Root cause from server logs stated in report
+- [x] Regression test seeds legacy shapes (no `parsed` key, missing company/role, no career report exists) → 200 with graceful nulls — fails pre-fix (`tests/integration/test_jobs_api.py`)
 **Test:** `cd apps/backend && uv run pytest tests/integration -k jobs`
 
 ### BUG-008: status_history missing from ApplicationResponse (outcome rates = 0)
@@ -41,7 +42,7 @@
 **Goal:** Status history flows DB → API → career overlay.
 **Files:** `apps/backend/app/schemas/applications.py`, serializer path, tests
 **Acceptance criteria:**
-- [ ] `status_history` in ApplicationResponse/Detail; regression test: move an application, assert history in response and non-zero rate from `compute_outcome_rates` over API-shaped data
+- [x] `status_history` in ApplicationResponse/Detail; regression test: move an application, assert history in response and non-zero rate from `compute_outcome_rates` over API-shaped data (`tests/integration/test_applications_history.py`)
 **Test:** `cd apps/backend && uv run pytest tests/integration -k application && uv run pytest tests/unit/test_career_scores.py`
 
 ### BUG-009: Smoke suite hardening — why didn't BUG-004 catch any of these?
@@ -49,10 +50,10 @@
 **Goal:** The smoke suite catches this bug class: new/changed endpoints breaking on real data shapes and mutation paths.
 **Files:** `apps/backend/tests/integration/test_smoke_paths.py`, `apps/frontend/tests/pages/`
 **Acceptance criteria:**
-- [ ] Post-mortem paragraph: for each of BUG-005/006/007, why the existing smoke suite missed it
-- [ ] Backend smoke extended: every POST/PATCH mutation endpoint (incl. `/applications/quick`, `/jobs/import`, `/facts/extract` with mocked LLM) against a seed DB containing every historical row shape (pre-P1, pre-P3, considering/NULL, parsed-less jobs, no career report)
-- [ ] Rule added to test docs: any ticket adding/changing an endpoint MUST add it to the smoke seed matrix — reviewer checks this
-- [ ] Frontend page smokes assert on real backend response fixtures captured from the seeded smoke DB (schema-parity), not hand-written mocks
+- [x] Post-mortem paragraph: for each of BUG-005/006/007, why the existing smoke suite missed it
+- [x] Backend smoke extended: every POST/PATCH mutation endpoint (incl. `/applications/quick`, `/jobs/import`, `/facts/extract` with mocked LLM) against a seed DB containing every historical row shape (pre-P1, pre-P3, considering/NULL, parsed-less jobs, no career report) (`tests/integration/test_smoke_paths.py`)
+- [x] Rule added to test docs: any ticket adding/changing an endpoint MUST add it to the smoke seed matrix — reviewer checks this (`apps/backend/tests/README.md`, `apps/frontend/tests/README.md`)
+- [x] Frontend page smokes assert on real backend response fixtures captured from the seeded smoke DB (schema-parity), not hand-written mocks
 **Test:** `cd apps/backend && uv run pytest tests/integration/test_smoke_paths.py && cd ../frontend && npm run test`
 
 ## BUGS — closed 2026-07-11 (first gate)
